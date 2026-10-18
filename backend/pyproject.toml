@@ -1,0 +1,145 @@
+[project]
+name = "delphin-crm-backend"
+version = "0.1.0"
+description = "Delphin Digital Agency CRM & Operations Platform: API"
+requires-python = ">=3.12,<3.14"
+# Lower bounds only; exact versions are pinned in uv.lock (`make lock`).
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.34",
+  "gunicorn>=23.0",
+  "pydantic>=2.11",
+  "pydantic-settings>=2.9",
+  "email-validator>=2.2",
+  "sqlalchemy[asyncio]>=2.0.40",
+  "asyncpg>=0.30",
+  "alembic>=1.15",
+  "argon2-cffi>=23.1",
+  "structlog>=25.1",
+  "firebase-admin>=6.5",
+]
+
+[dependency-groups]
+dev = [
+  "ruff>=0.13",
+  "mypy>=1.17",
+  "pytest>=8.4",
+  "pytest-asyncio>=1.0",
+  "pytest-cov>=6.2",
+  "httpx>=0.28",
+  "import-linter>=2.3",
+]
+
+[tool.uv]
+package = false
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["../reference", "migrations/versions/*.mako"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "S", "ASYNC", "SIM", "RUF", "N", "PT", "DTZ", "C4", "PL", "TID"]
+ignore = ["PLR0913", "PLR2004", "N818"]  # N818: NotFound, Forbidden… are the documented names
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "PLR2004"]
+"migrations/**" = ["E501"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+# ---------------------------------------------------------------- mypy
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["app", "scripts", "migrations", "tests"]
+exclude = ['^\.\./reference/']
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_decorators = false
+# Tests compile SQL with SQLAlchemy dialects, whose constructors are untyped.
+disallow_untyped_calls = false
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-ra --strict-markers --cov --cov-report=term-missing"
+markers = [
+  "integration: needs PostgreSQL (TEST_DATABASE_URL)",
+]
+filterwarnings = ["error::DeprecationWarning:app.*"]
+
+[tool.coverage.run]
+# Definition of Done: >= 90 % on the foundation packages.
+source = ["app/core", "app/authz", "app/platform"]
+# SQLAlchemy async resumes code in greenlets; without this, lines after `await` look uncovered.
+concurrency = ["greenlet", "thread"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError", '\.\.\.$', 'class .*\(Protocol\):']
+
+# ---------------------------------------------------------------- import-linter
+[tool.importlinter]
+root_package = "app"
+
+[[tool.importlinter.contracts]]
+name = "Module layering: router -> service -> repository -> models"
+type = "layers"
+layers = ["router", "service", "repository", "models"]
+containers = [
+  "app.modules.auth",
+  "app.modules.dashboard",
+  "app.modules.notifications",
+  "app.modules.clients",
+  "app.modules.onboarding",
+  "app.modules.projects",
+  "app.modules.tasks",
+  "app.modules.approvals",
+  "app.modules.meetings",
+  "app.modules.services",
+  "app.modules.seo",
+  "app.modules.content",
+  "app.modules.team",
+  "app.modules.documents",
+  "app.modules.reports",
+  "app.modules.finance",
+  "app.modules.search",
+  "app.modules.settings",
+  "app.modules.activity",
+  "app.modules.jobs",
+]
+
+[[tool.importlinter.contracts]]
+name = "Routers never skip the service layer"
+type = "forbidden"
+source_modules = ["app.modules.*.router"]
+forbidden_modules = ["app.modules.*.repository", "app.modules.*.models"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Foundation never depends on feature modules or the HTTP surface"
+type = "forbidden"
+source_modules = ["app.core", "app.db", "app.authz", "app.platform"]
+forbidden_modules = ["app.modules", "app.api", "app.main"]
+
+[[tool.mypy.overrides]]
+module = ["asyncpg", "asyncpg.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["firebase_admin", "firebase_admin.*"]
+ignore_missing_imports = true
