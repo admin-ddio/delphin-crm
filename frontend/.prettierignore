@@ -1,0 +1,13 @@
+dist
+coverage
+playwright-report
+test-results
+node_modules
+pnpm-lock.yaml
+# Generated: never formatted or hand-edited.
+src/api/schema.d.ts
+src/api/openapi.json
+# Byte-for-byte port of the pilot's globals.css (token-drift test).
+src/styles/globals.css
+# Parity checklists keep the pilot's wording as-is.
+**/PARITY.md
