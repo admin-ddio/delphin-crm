@@ -1,0 +1,895 @@
+<title>Delphin Agency Console</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: fixed left rail of modules, work area on the right; record pages use a step rail + tabbed body. */
+:root {
+  --bg: #f4f7f8; --surface: #ffffff; --sunk: #eaf0f2; --line: #d6e0e4; --line-soft: #e6edf0;
+  --fg: #142229; --muted: #5a6d75; --faint: #8697a0;
+  --accent: #156a92; --accent-strong: #0f5374; --accent-soft: #e2f0f6; --on-accent: #ffffff;
+  --ok: #1e7f55; --ok-soft: #e1f3ea; --warn: #9a6400; --warn-soft: #fbf0d9; --bad: #b3372c; --bad-soft: #fbe6e3; --info: #5b4bb5; --info-soft: #ece9fa;
+  --font-ui: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 8px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1a1f; --surface: #152329; --sunk: #1b2c33; --line: #2a3e46; --line-soft: #223540;
+  --fg: #e3ecef; --muted: #9db0b8; --faint: #6f838c;
+  --accent: #5fb3d9; --accent-strong: #84c6e4; --accent-soft: #173746; --on-accent: #08161c;
+  --ok: #5cc995; --ok-soft: #133a2b; --warn: #e2b04f; --warn-soft: #3a2f15; --bad: #ef7d70; --bad-soft: #3d1d1a; --info: #a99cf0; --info-soft: #2a2550;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1a1f; --surface: #152329; --sunk: #1b2c33; --line: #2a3e46; --line-soft: #223540;
+  --fg: #e3ecef; --muted: #9db0b8; --faint: #6f838c;
+  --accent: #5fb3d9; --accent-strong: #84c6e4; --accent-soft: #173746; --on-accent: #08161c;
+  --ok: #5cc995; --ok-soft: #133a2b; --warn: #e2b04f; --warn-soft: #3a2f15; --bad: #ef7d70; --bad-soft: #3d1d1a; --info: #a99cf0; --info-soft: #2a2550;
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--font-ui); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.app { display: grid; grid-template-columns: 228px minmax(0, 1fr); min-height: 100%; }
+.rail { background: var(--surface); border-right: 1px solid var(--line); padding-block: 14px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
+.mark { width: 30px; height: 30px; border-radius: 7px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-weight: 700; }
+.brand b { font-size: 14px; line-height: 1.1; } .brand small { display: block; color: var(--muted); font-size: 11px; }
+.navgroup { display: flex; flex-direction: column; gap: 2px; }
+.navgroup h6 { margin: 0 0 4px; padding: 0 8px; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 8px; border-radius: 6px; border: 0; background: none; text-align: left; color: var(--muted); cursor: pointer; }
+.nav:hover { background: var(--sunk); color: var(--fg); }
+.nav[aria-current="page"] { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
+.count { font: 500 11px var(--font-data); background: var(--accent); color: var(--on-accent); border-radius: 10px; padding: 0 6px; }
+
+.main { min-width: 0; display: flex; flex-direction: column; }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+.demo-flag { font-size: 12px; color: var(--warn); background: var(--warn-soft); border-radius: 6px; padding: 3px 8px; }
+.sync { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); } .dot.on { background: var(--ok); }
+.persona { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.menu-btn { display: none; }
+.content { padding-block: 22px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1320px; width: 100%; }
+
+h1 { font-size: 21px; line-height: 1.25; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-size: 14px; margin: 0; } h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+.sub { color: var(--muted); margin: 4px 0 0; max-width: 70ch; }
+.head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.crumb { font-size: 12px; color: var(--muted); margin-bottom: 4px; } .crumb button { all: unset; cursor: pointer; color: var(--accent); } .crumb button:hover { text-decoration: underline; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.grid { display: grid; gap: 16px; } .g2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); } .g4 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.split { display: grid; gap: 16px; grid-template-columns: 250px minmax(0, 1fr); align-items: start; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+.panel > header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line-soft); }
+.panel > header p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+.panel > .body { padding: 14px; }
+.stat { padding: 12px 14px; } .stat .k { font-size: 12px; color: var(--muted); } .stat .v { font: 600 24px/1.2 var(--font-data); font-variant-numeric: tabular-nums; margin-top: 2px; } .stat .h { font-size: 11.5px; color: var(--faint); }
+.v.bad { color: var(--bad); }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; padding: 6px 11px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 500; font-size: 13px; white-space: nowrap; }
+.btn:hover { background: var(--sunk); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); } .btn.primary:hover { background: var(--accent-strong); }
+.btn.ghost { border-color: transparent; background: none; color: var(--accent); } .btn.ghost:hover { background: var(--accent-soft); }
+.btn.danger { color: var(--bad); border-color: var(--bad); background: none; }
+.btn.sm { padding: 3px 8px; font-size: 12px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 1px 8px; font-size: 11.5px; font-weight: 500; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.acc { background: var(--accent-soft); color: var(--accent-strong); } .pill.info { background: var(--info-soft); color: var(--info); }
+.code { font: 500 12px var(--font-data); color: var(--muted); }
+
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--sunk); white-space: nowrap; }
+td { padding: 9px 12px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+td.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: 0; }
+.link { all: unset; cursor: pointer; color: var(--accent); font-weight: 500; } .link:hover { text-decoration: underline; }
+.empty { padding: 26px 16px; text-align: center; color: var(--muted); }
+.empty b { display: block; color: var(--fg); margin-bottom: 4px; }
+
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 16px; overflow-x: auto; }
+.tab { all: unset; cursor: pointer; padding: 8px 12px; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; font-weight: 500; }
+.tab[aria-selected="true"] { color: var(--accent-strong); border-bottom-color: var(--accent); }
+
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.step { display: grid; grid-template-columns: 20px 1fr; gap: 8px; font-size: 13px; }
+.tick { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 11px; margin-top: 1px; }
+.step.done .tick { background: var(--ok); border-color: var(--ok); color: var(--on-accent); }
+.step.prog .tick { border-color: var(--accent); }
+.step.blocked .tick { border-color: var(--bad); color: var(--bad); }
+.step small { display: block; color: var(--muted); font-size: 11.5px; }
+.step.done span { color: var(--muted); }
+.bar { height: 6px; background: var(--sunk); border-radius: 4px; overflow: hidden; } .bar i { display: block; height: 100%; background: var(--accent); }
+.bar.full i { background: var(--ok); }
+.prog { display: flex; align-items: center; gap: 8px; } .prog .bar { flex: 1; min-width: 60px; } .prog span { font: 500 11.5px var(--font-data); color: var(--muted); width: 34px; text-align: right; }
+
+.callout { border-radius: var(--r); padding: 11px 14px; font-size: 13px; border: 1px solid var(--line); background: var(--accent-soft); color: var(--fg); }
+.callout.warn { background: var(--warn-soft); border-color: transparent; } .callout.bad { background: var(--bad-soft); border-color: transparent; } .callout.ok { background: var(--ok-soft); border-color: transparent; }
+.callout b { display: block; }
+
+.board { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; }
+.col { flex: 0 0 220px; background: var(--sunk); border-radius: var(--r); padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.col h4 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: flex; justify-content: space-between; padding: 2px 4px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 10px; cursor: pointer; text-align: left; }
+.card:hover { border-color: var(--accent); }
+.card .t { font-weight: 500; } .card .m { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.card.late { border-left-color: var(--bad); }
+
+form.f { display: flex; flex-direction: column; gap: 12px; }
+.fields { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+label.fld { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.fld input, .fld select, .fld textarea { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 7px 9px; font-size: 13px; color: var(--fg); }
+.fld textarea { min-height: 70px; resize: vertical; }
+.err { color: var(--bad); font-size: 12.5px; }
+
+.timeline { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.timeline li { position: relative; font-size: 13px; } .timeline li::before { content: ""; position: absolute; left: -18px; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.timeline small { display: block; color: var(--faint); font-size: 11.5px; }
+
+.drawer-bg { position: fixed; inset: 0; background: rgb(8 20 26 / .45); z-index: 30; }
+.drawer { position: fixed; z-index: 31; top: 0; right: 0; bottom: 0; width: min(560px, 100%); background: var(--surface); border-left: 1px solid var(--line); overflow-y: auto; padding: calc(16px + env(safe-area-inset-top, 0px)) max(18px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) 18px; display: flex; flex-direction: column; gap: 14px; }
+.toast { position: fixed; z-index: 40; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: 380px; background: var(--fg); color: var(--bg); padding: 10px 14px; border-radius: 8px; font-size: 13px; box-shadow: 0 6px 20px rgb(0 0 0 / .2); }
+.toast.bad { background: var(--bad); color: #fff; }
+.kv { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 6px 12px; font-size: 13px; } .kv dt { color: var(--muted); } .kv dd { margin: 0; }
+.version { border: 1px solid var(--line-soft); border-radius: 6px; padding: 8px 10px; font-size: 13px; }
+.version .fb { margin-top: 6px; background: var(--warn-soft); border-radius: 5px; padding: 6px 8px; }
+.muted { color: var(--muted); }
+
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .rail { position: fixed; z-index: 35; inset: 0 auto 0 0; width: 250px; height: 100%; transform: translateX(-100%); transition: transform .2s; padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
+  .rail.open { transform: none; box-shadow: 0 0 40px rgb(0 0 0 / .3); }
+  .menu-btn { display: inline-flex; }
+  .split { grid-template-columns: minmax(0, 1fr); }
+  .persona { margin-left: 0; width: 100%; }
+}
+</style>
+
+<div class="app">
+  <aside class="rail" id="rail" aria-label="Modules"></aside>
+  <div class="main">
+    <div class="top">
+      <button class="btn sm menu-btn" id="menuBtn" aria-label="Open navigation">Menu</button>
+      <span class="demo-flag">Demo build · data is shared with everyone who opens this page</span>
+      <span class="sync" id="sync"><span class="dot"></span><span>Connecting…</span></span>
+      <label class="persona" for="personaSel">Viewing as
+        <select id="personaSel" class="fld"></select>
+      </label>
+    </div>
+    <main class="content" id="view" aria-live="polite"></main>
+  </div>
+</div>
+<div id="overlay"></div>
+<div id="toastHost"></div>
+
+<script>
+(() => {
+  "use strict";
+  // ───────────────────────── People & roles (demo personas) ─────────────────────────
+  const PEOPLE = [
+    { id: "u_sa", name: "Ravi Menon", role: "SUPER_ADMIN", title: "Managing Director" },
+    { id: "u_am", name: "Anika Shah", role: "ACCOUNT_MANAGER", title: "Account Manager" },
+    { id: "u_pm", name: "Tomás Ortega", role: "PROJECT_MANAGER", title: "Project Manager" },
+    { id: "u_tl", name: "Mei Chen", role: "TEAM_LEAD", title: "SEO Team Lead" },
+    { id: "u_sp", name: "Jordan Blake", role: "EMPLOYEE", title: "SEO Specialist" },
+    { id: "u_fn", name: "Grace Okafor", role: "FINANCE", title: "Accounts Executive" },
+  ];
+  const ROLE_LABEL = { SUPER_ADMIN: "Super Admin", ACCOUNT_MANAGER: "Account Manager", PROJECT_MANAGER: "Project Manager", TEAM_LEAD: "Team Lead", EMPLOYEE: "Employee / Specialist", FINANCE: "Finance" };
+  const PERMS = {
+    SUPER_ADMIN: ["*"],
+    ACCOUNT_MANAGER: ["clients.create", "onboarding", "access.verify", "kpi.confirm", "projects.create", "tasks.create", "client.decision", "retainers", "view.money"],
+    PROJECT_MANAGER: ["projects.create", "tasks.create", "review", "access.verify", "jobs.run"],
+    TEAM_LEAD: ["tasks.create", "review", "access.verify"],
+    EMPLOYEE: [],
+    FINANCE: ["finance", "view.money"],
+  };
+  const person = (id) => PEOPLE.find((p) => p.id === id) || { id, name: "Unknown", role: "EMPLOYEE", title: "" };
+  let me = PEOPLE[0];
+  try { const saved = localStorage.getItem("dd.persona"); if (saved && PEOPLE.some((p) => p.id === saved)) me = person(saved); } catch {}
+  const can = (perm) => PERMS[me.role].includes("*") || PERMS[me.role].includes(perm);
+
+  // ───────────────────────── State ─────────────────────────
+  const empty = () => ({ v: 1, seq: { client: 0, project: 0, task: 0, invoice: 0, id: 0 }, clients: [], projects: [], tasks: [], approvals: [], services: [], invoices: [], activity: [] });
+  let S = empty();
+  const uid = (p) => `${p}${Date.now().toString(36)}${(S.seq.id = (S.seq.id || 0) + 1)}`;
+  const nowIso = () => new Date().toISOString();
+  const today = () => new Date().toISOString().slice(0, 10);
+  const addDays = (iso, n) => { const d = new Date(iso + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const pad = (n, w = 4) => String(n).padStart(w, "0");
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmtDate = (iso) => iso ? new Date(iso.length === 10 ? iso + "T00:00:00Z" : iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) : "—";
+  const fmtWhen = (iso) => new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  const money = (n) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n || 0);
+  const normName = (s) => s.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9 ]/g, " ").replace(/\b(the|inc|llc|ltd|limited|co|corp|company|pvt|private)\b/g, " ").replace(/\s+/g, " ").trim();
+  const domainOf = (s) => { if (!s) return ""; try { return new URL(/^https?:/i.test(s) ? s : "https://" + s).hostname.replace(/^www\./, "").toLowerCase(); } catch { return ""; } };
+
+  function log(text, clientId) {
+    S.activity.unshift({ at: nowIso(), actor: me.id, clientId: clientId || null, text });
+    if (S.activity.length > 150) S.activity.length = 150;
+  }
+
+  // ───────────────────────── Storage: shared db doc, local fallback ─────────────────────────
+  let db = null, ref = null, writing = Promise.resolve(), saveTimer = null, connected = false, lastWritten = "";
+  const LOCAL_KEY = "dd.demo.state";
+  function setSync(text, on) { const el = document.getElementById("sync"); el.innerHTML = `<span class="dot ${on ? "on" : ""}"></span><span>${esc(text)}</span>`; }
+  function persist() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      const body = JSON.parse(JSON.stringify(S));
+      lastWritten = JSON.stringify(body);
+      if (ref) {
+        writing = writing.then(() => ref.set(body)).then(() => setSync("Saved · shared", true)).catch((e) => {
+          setSync("Not saved", false);
+          toast(e && e.code === "invalid_argument" ? "Your access to this page is read-only, so changes aren't saved." : "Couldn't save the change. Check your connection and try again.", true);
+        });
+      } else {
+        try { localStorage.setItem(LOCAL_KEY, lastWritten); setSync("Saved in this browser only", false); } catch { setSync("Not saved", false); }
+      }
+    }, 350);
+  }
+  function commit(msg) { persist(); render(); if (msg) toast(msg); }
+
+  function loadLocal() { try { const raw = localStorage.getItem(LOCAL_KEY); if (raw) S = Object.assign(empty(), JSON.parse(raw)); } catch {} }
+
+  async function connect() {
+    loadLocal();
+    render();
+    try {
+      db = window.claude && typeof window.claude.use === "function" ? await window.claude.use("db") : null;
+    } catch { db = null; }
+    if (!db) { setSync("Offline demo · saved in this browser only", false); return; }
+    ref = db.doc("demo/state");
+    ref.onSnapshot((snap) => {
+      connected = true;
+      if (!snap.exists) { setSync("Connected · no records yet", true); if (snap.metadata && !snap.metadata.fromCache) { S = empty(); render(); } return; }
+      const data = snap.data();
+      const raw = JSON.stringify(data);
+      if (snap.metadata && snap.metadata.hasPendingWrites) return;
+      if (raw === lastWritten) { setSync("Saved · shared", true); return; }
+      S = Object.assign(empty(), JSON.parse(raw));
+      setSync("Live · shared", true);
+      render();
+    }, () => setSync("Connection lost · reload the page", false));
+  }
+
+  // ───────────────────────── Onboarding rules (mirror of the real service) ─────────────────────────
+  const STEP_DEFS = [
+    ["CONTRACT", "Contract signed", "Record the contract and mark it signed."],
+    ["CREATED", "Client created", ""],
+    ["PROFILE", "Client profile completed", "Fill in website, industry and a primary contact with e-mail."],
+    ["Q_SENT", "Onboarding questionnaire sent", "Send the questionnaire link to the client."],
+    ["Q_DONE", "Questionnaire submitted", "Record the client's answers."],
+    ["ACCESS_IN", "Platform access collected", "Mark each platform as received."],
+    ["ACCESS_OK", "Access verified", "An authorised team member verifies every item."],
+    ["KPI", "KPI targets defined & confirmed", "Add KPI targets and record the client's confirmation."],
+    ["KICKOFF_C", "Client kickoff meeting", "Hold and complete the client kickoff."],
+    ["KICKOFF_I", "Internal team kickoff", "Assign the team and complete the internal kickoff."],
+    ["REVIEW", "Onboarding review", "Pass the review checklist."],
+    ["DONE", "Onboarding completed", "Complete onboarding."],
+    ["PROJECT", "Project created / linked", "Create the delivery project."],
+  ];
+  function steps(c) {
+    const out = {};
+    const set = (k, st, d = "") => (out[k] = { st, d });
+    set("CONTRACT", c.contract === "signed" ? "done" : c.contract === "draft" ? "prog" : "todo", c.contract === "signed" ? "" : c.contract === "draft" ? "Recorded, not yet signed" : "No contract recorded");
+    set("CREATED", "done");
+    const miss = [!c.website && "website", !c.industry && "industry", !(c.contact && c.contactEmail) && "primary contact"].filter(Boolean);
+    set("PROFILE", miss.length ? "prog" : "done", miss.length ? "Missing: " + miss.join(", ") : "");
+    set("Q_SENT", c.questionnaire !== "none" ? "done" : "todo", c.questionnaire === "none" ? "Not sent" : "");
+    set("Q_DONE", c.questionnaire === "submitted" ? "done" : c.questionnaire === "sent" ? "prog" : "todo", c.questionnaire === "sent" ? "Awaiting the client" : "");
+    const app = c.access.filter((a) => a.status !== "not_required");
+    const rej = app.filter((a) => a.status === "rejected");
+    const notIn = app.filter((a) => !["received", "verified"].includes(a.status));
+    const notOk = app.filter((a) => a.status !== "verified");
+    set("ACCESS_IN", rej.length ? "blocked" : notIn.length ? (app.some((a) => a.status !== "pending") ? "prog" : "todo") : "done", rej.length ? "Rejected: " + rej.map((a) => a.label).join(", ") : notIn.length ? "Outstanding: " + notIn.map((a) => a.label).join(", ") : "");
+    set("ACCESS_OK", rej.length ? "blocked" : notOk.length ? (app.some((a) => a.status === "verified") ? "prog" : "todo") : "done", notOk.length ? "Not verified: " + notOk.map((a) => a.label).join(", ") : "");
+    const unconf = c.kpis.filter((k) => !k.confirmedBy);
+    set("KPI", !c.kpis.length ? "todo" : unconf.length ? "prog" : "done", !c.kpis.length ? "No KPI targets" : unconf.length ? `${unconf.length} awaiting client confirmation` : "");
+    set("KICKOFF_C", c.kickoffClient === "done" ? "done" : c.kickoffClient === "scheduled" ? "prog" : "todo", c.kickoffClient === "done" ? "" : c.kickoffClient === "scheduled" ? "Scheduled, not completed" : "Not scheduled");
+    const teamOk = c.team.length > 0;
+    set("KICKOFF_I", c.kickoffInternal === "done" && teamOk ? "done" : teamOk || c.kickoffInternal !== "none" ? "prog" : "todo", [!teamOk && "No team assigned", c.kickoffInternal !== "done" && "Internal kickoff not completed"].filter(Boolean).join("; "));
+    const pre = STEP_DEFS.slice(0, 10).every(([k]) => out[k].st === "done");
+    set("REVIEW", c.reviewed && pre ? "done" : pre ? "prog" : "todo", c.reviewed && pre ? "" : pre ? "Ready for review" : "Earlier steps incomplete");
+    set("DONE", c.completed ? "done" : c.reviewed && pre ? "prog" : "todo", c.completed ? "" : c.reviewed && pre ? "Ready to complete" : "");
+    const hasProject = S.projects.some((p) => p.clientId === c.id);
+    set("PROJECT", hasProject ? "done" : c.completed ? "prog" : "todo", hasProject ? "" : c.completed ? "Create the delivery project" : "Available after onboarding is completed");
+    if (c.completed) STEP_DEFS.slice(0, 12).forEach(([k]) => (out[k] = { st: "done", d: "" }));
+    const list = STEP_DEFS.map(([k, label, hint], i) => ({ k, label, hint, n: i + 1, ...out[k] }));
+    const progress = Math.round((list.filter((s) => s.st === "done").length / list.length) * 100);
+    const blocked = list.some((s) => s.st === "blocked");
+    return { list, progress, blocked, byKey: out };
+  }
+  const obStatus = (c) => c.completed ? "Completed" : steps(c).blocked ? "Blocked" : "In progress";
+
+  // ───────────────────────── Router ─────────────────────────
+  let route = { page: "dashboard" };
+  let navOpen = false;
+  const go = (r) => { route = r; navOpen = false; window.scrollTo(0, 0); render(); };
+
+  const NAV = [
+    ["Overview", [["dashboard", "Dashboard"]]],
+    ["Clients", [["clients", "CRM & Clients"], ["onboarding", "Client Onboarding"]]],
+    ["Delivery", [["projects", "Projects"], ["tasks", "Tasks & Work"], ["approvals", "Approvals"]]],
+    ["Services", [["retainers", "Services & Retainers"]]],
+    ["Organisation", [["finance", "Finance & Billing"], ["team", "Team & Roles"], ["activity", "Activity log"]]],
+  ];
+
+  function renderRail() {
+    const myApprovals = S.approvals.filter((a) => a.status === "submitted" && approverFor(a) === me.id).length;
+    const myTasks = S.tasks.filter((t) => t.assignee === me.id && !["completed", "cancelled"].includes(t.status)).length;
+    const rail = document.getElementById("rail");
+    rail.classList.toggle("open", navOpen);
+    rail.innerHTML = `
+      <div class="brand"><span class="mark">D</span><div><b>Delphin Digital</b><small>Agency console</small></div></div>
+      ${NAV.map(([g, items]) => `<div class="navgroup"><h6>${g}</h6>${items.map(([k, label]) => {
+        if (k === "finance" && !can("finance") && !can("view.money")) return "";
+        const badge = k === "approvals" && myApprovals ? `<span class="count">${myApprovals}</span>` : k === "tasks" && myTasks ? `<span class="count">${myTasks}</span>` : "";
+        const current = route.page === k || (k === "clients" && route.page === "client") || (k === "projects" && route.page === "project");
+        return `<button class="nav" data-go="${k}" ${current ? 'aria-current="page"' : ""}><span>${label}</span>${badge}</button>`;
+      }).join("")}</div>`).join("")}
+      <div class="navgroup" style="margin-top:auto"><h6>Demo</h6><button class="nav" data-act="reset-ask"><span>Reset demo data</span></button></div>`;
+  }
+
+  function render() {
+    renderRail();
+    const sel = document.getElementById("personaSel");
+    sel.innerHTML = PEOPLE.map((p) => `<option value="${p.id}" ${p.id === me.id ? "selected" : ""}>${esc(p.name)} — ${ROLE_LABEL[p.role]}</option>`).join("");
+    const pages = { dashboard: viewDashboard, clients: viewClients, client: viewClient, onboarding: viewOnboardingBoard, projects: viewProjects, project: viewProject, tasks: viewTasks, approvals: viewApprovals, retainers: viewRetainers, finance: viewFinance, team: viewTeam, activity: viewActivity, newClient: viewNewClient };
+    document.getElementById("view").innerHTML = (pages[route.page] || viewDashboard)();
+    renderOverlay();
+  }
+
+  // ───────────────────────── Shared bits ─────────────────────────
+  const pill = (txt, tone = "") => `<span class="pill ${tone}">${esc(txt)}</span>`;
+  const progBar = (v) => `<div class="prog"><div class="bar ${v === 100 ? "full" : ""}"><i style="width:${v}%"></i></div><span>${v}%</span></div>`;
+  const panel = (title, body, opts = {}) => `<section class="panel">${title ? `<header><div><h2>${title}</h2>${opts.desc ? `<p>${opts.desc}</p>` : ""}</div>${opts.actions || ""}</header>` : ""}<div class="body" ${opts.flush ? 'style="padding:0"' : ""}>${body}</div></section>`;
+  const emptyBox = (t, d = "", action = "") => `<div class="empty"><b>${t}</b>${d}${action ? `<div style="margin-top:10px">${action}</div>` : ""}</div>`;
+  const head = (title, sub, actions = "", crumb = "") => `<div class="head"><div>${crumb}<h1>${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ""}</div><div class="row">${actions}</div></div>`;
+  const clientName = (id) => (S.clients.find((c) => c.id === id) || {}).name || "—";
+  const TASK_STATUS = { backlog: ["Backlog", ""], ready: ["Ready", "acc"], in_progress: ["In progress", "acc"], blocked: ["Blocked", "bad"], internal_review: ["Internal review", "info"], client_approval: ["Client approval", "info"], completed: ["Completed", "ok"], cancelled: ["Cancelled", ""] };
+  const taskPill = (s) => pill(TASK_STATUS[s][0], TASK_STATUS[s][1]);
+  const isLate = (t) => t.due && t.due < today() && !["completed", "cancelled"].includes(t.status);
+
+  function stat(k, v, h = "", bad = false) { return `<div class="panel stat"><div class="k">${k}</div><div class="v ${bad ? "bad" : ""}">${v}</div>${h ? `<div class="h">${h}</div>` : ""}</div>`; }
+
+  // ───────────────────────── Dashboard ─────────────────────────
+  function viewDashboard() {
+    const active = S.clients.filter((c) => c.completed).length;
+    const onboarding = S.clients.filter((c) => !c.completed).length;
+    const open = S.tasks.filter((t) => !["completed", "cancelled"].includes(t.status));
+    const overdue = open.filter(isLate);
+    const pending = S.approvals.filter((a) => a.status === "submitted");
+    const receivable = S.invoices.filter((i) => ["issued", "partial"].includes(i.status)).reduce((a, i) => a + i.total - i.paid, 0);
+    const mrr = S.services.filter((s) => s.status === "active").reduce((a, s) => a + s.amount, 0);
+    const mine = open.filter((t) => t.assignee === me.id);
+    const work = PEOPLE.map((p) => ({ p, open: open.filter((t) => t.assignee === p.id).length, late: overdue.filter((t) => t.assignee === p.id).length }));
+    return `${head(`Good day, ${esc(me.name.split(" ")[0])}`, `You're viewing as <b>${ROLE_LABEL[me.role]}</b>. Switch persona at the top right to see how access changes. Every number is counted from the records below.`)}
+      <div class="grid g4" style="margin-bottom:16px">
+        ${stat("Active clients", active, "Onboarding completed")}
+        ${stat("In onboarding", onboarding)}
+        ${stat("Open tasks", open.length)}
+        ${stat("Overdue tasks", overdue.length, "Past due date, not completed", overdue.length > 0)}
+        ${stat("Awaiting approval", pending.length, `${pending.filter((a) => a.stage === "internal").length} internal · ${pending.filter((a) => a.stage === "client").length} client`)}
+        ${can("view.money") ? stat("Contracted / month", money(mrr), "Active retainers; not revenue") : ""}
+        ${can("view.money") ? stat("Outstanding receivables", money(receivable)) : ""}
+      </div>
+      <div class="grid g2">
+        ${panel("My open work", mine.length ? taskTable(mine) : emptyBox("Nothing assigned to you", "Tasks assigned to " + esc(me.name) + " appear here."), { flush: true })}
+        ${panel("Onboarding pipeline", S.clients.filter((c) => !c.completed).length ? `<div class="tablewrap"><table><thead><tr><th>Client</th><th>Progress</th><th>Status</th></tr></thead><tbody>${S.clients.filter((c) => !c.completed).map((c) => `<tr><td><button class="link" data-client="${c.id}">${esc(c.name)}</button></td><td style="width:40%">${progBar(steps(c).progress)}</td><td>${pill(obStatus(c), obStatus(c) === "Blocked" ? "bad" : "acc")}</td></tr>`).join("")}</tbody></table></div>` : emptyBox("No clients in onboarding"), { flush: true })}
+        ${panel("Team workload", `<div class="tablewrap"><table><thead><tr><th>Person</th><th>Open</th><th>Overdue</th></tr></thead><tbody>${work.map((w) => `<tr><td>${esc(w.p.name)}<div class="code">${esc(w.p.title)}</div></td><td class="num">${w.open}</td><td class="num" style="${w.late ? "color:var(--bad)" : ""}">${w.late}</td></tr>`).join("")}</tbody></table></div>`, { flush: true })}
+        ${panel("Recent activity", S.activity.length ? timeline(S.activity.slice(0, 8)) : emptyBox("No activity yet"))}
+      </div>`;
+  }
+
+  const timeline = (items) => `<ul class="timeline">${items.map((a) => `<li>${esc(a.text)}<small>${esc(person(a.actor).name)} · ${fmtWhen(a.at)}</small></li>`).join("")}</ul>`;
+
+  // ───────────────────────── Clients ─────────────────────────
+  function viewClients() {
+    const list = S.clients.slice().sort((a, b) => a.name.localeCompare(b.name));
+    return `${head("CRM & Clients", "Every client relationship. Lifecycle status is separate from onboarding progress.", can("clients.create") ? `<button class="btn primary" data-go="newClient">New client</button>` : "")}
+      ${panel("", list.length ? `<div class="tablewrap"><table><thead><tr><th>Client</th><th>Status</th><th>Onboarding</th><th>Account Manager</th><th>Projects</th></tr></thead><tbody>${list.map((c) => `<tr><td><button class="link" data-client="${c.id}">${esc(c.name)}</button><div class="code">${esc(c.code)}${c.domain ? " · " + esc(c.domain) : ""}</div></td><td>${c.completed ? pill("Active", "ok") : c.contract === "signed" ? pill("Onboarding", "acc") : pill("Contract pending")}</td><td style="width:200px">${c.completed ? pill("Completed", "ok") : progBar(steps(c).progress)}</td><td>${esc(person(c.am).name)}</td><td class="num">${S.projects.filter((p) => p.clientId === c.id).length}</td></tr>`).join("")}</tbody></table></div>`
+        : emptyBox("No clients yet", "Create the first client once the contract is signed. Onboarding starts automatically.", can("clients.create") ? `<button class="btn primary" data-go="newClient">New client</button>` : `<span class="muted">Switch to the Account Manager or Super Admin persona to create one.</span>`), { flush: true })}`;
+  }
+
+  let formError = "";
+  function viewNewClient() {
+    if (!can("clients.create")) return head("New client", "") + `<div class="callout bad"><b>Access denied</b>${ROLE_LABEL[me.role]} can't create clients.</div>`;
+    return `${head("New client", "Step 2 of onboarding. The onboarding checklist and the access checklist (GSC, GA4, CMS, Ahrefs, Google Drive) are created automatically.", "", `<div class="crumb"><button data-go="clients">Clients</button></div>`)}
+      ${panel("", `<form class="f" id="newClientForm">
+        ${formError ? `<div class="err" role="alert">${esc(formError)}</div>` : ""}
+        <div class="fields">
+          <label class="fld" for="nc_name">Legal / business name *<input id="nc_name" name="name" required></label>
+          <label class="fld" for="nc_web">Website<input id="nc_web" name="website" placeholder="example.com"></label>
+          <label class="fld" for="nc_ind">Industry<input id="nc_ind" name="industry"></label>
+          <label class="fld" for="nc_am">Account Manager<select id="nc_am" name="am">${PEOPLE.filter((p) => ["ACCOUNT_MANAGER", "SUPER_ADMIN"].includes(p.role)).map((p) => `<option value="${p.id}" ${p.id === me.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
+          <label class="fld" for="nc_contact">Primary contact<input id="nc_contact" name="contact"></label>
+          <label class="fld" for="nc_email">Contact e-mail<input id="nc_email" name="contactEmail" type="email"></label>
+        </div>
+        <label class="row" for="nc_dup" style="font-size:13px"><input type="checkbox" id="nc_dup" name="dup"> This is a different business (override a possible-duplicate warning)</label>
+        <div class="row"><button class="btn primary" type="submit">Create client</button><button class="btn" type="button" data-go="clients">Cancel</button></div>
+      </form>`)}`;
+  }
+
+  function createClient(fd) {
+    const name = String(fd.get("name") || "").trim();
+    if (!name) { formError = "Enter the client's legal or business name."; return render(); }
+    const domain = domainOf(String(fd.get("website") || ""));
+    const dupDomain = domain && S.clients.find((c) => c.domain === domain);
+    if (dupDomain) { formError = `A client with the domain ${domain} already exists (${dupDomain.name}).`; return render(); }
+    const dupName = S.clients.find((c) => normName(c.name) === normName(name));
+    if (dupName && !fd.get("dup")) { formError = `A client with a similar name already exists: ${dupName.name}. Tick "This is a different business" to continue.`; return render(); }
+    formError = "";
+    S.seq.client++;
+    const c = {
+      id: uid("c"), code: "CL-" + pad(S.seq.client), name, website: String(fd.get("website") || "").trim(), domain, industry: String(fd.get("industry") || "").trim(),
+      contact: String(fd.get("contact") || "").trim(), contactEmail: String(fd.get("contactEmail") || "").trim(), am: String(fd.get("am") || me.id), createdAt: nowIso(),
+      contract: "none", questionnaire: "none", answers: {}, kpis: [], kickoffClient: "none", kickoffInternal: "none", team: [], reviewed: false, completed: false,
+      access: [["GSC", "Google Search Console"], ["GA4", "Google Analytics 4"], ["CMS", "Website CMS"], ["AHREFS", "Ahrefs"], ["GDRIVE", "Google Drive"]].map(([k, label]) => ({ k, label, status: "pending", verifiedBy: null })),
+    };
+    S.clients.push(c);
+    log(`Client ${c.name} created`, c.id);
+    route = { page: "client", id: c.id, tab: "onboarding" };
+    commit(`Client ${c.name} created`);
+  }
+
+  function viewClient() {
+    const c = S.clients.find((x) => x.id === route.id);
+    if (!c) return emptyBox("Client not found", "It may have been removed by someone else.");
+    const visible = can("*") || ["SUPER_ADMIN", "ACCOUNT_MANAGER", "PROJECT_MANAGER", "FINANCE"].includes(me.role) || c.team.includes(me.id) || S.tasks.some((t) => t.clientId === c.id && t.assignee === me.id);
+    if (!visible) return `<div class="callout bad"><b>Not found</b>This client doesn't exist or you don't have access to it. Employees only see clients they work on.</div>`;
+    const tab = route.tab || "overview";
+    const st = steps(c);
+    const tabs = [["overview", "Overview"], ["onboarding", "Onboarding"], ["projects", "Projects"], ["activity", "Activity"]];
+    return `${head(`${esc(c.name)} ${c.completed ? pill("Active", "ok") : pill("Onboarding " + st.progress + "%", "acc")}`, `<span class="code">${esc(c.code)}</span>${c.domain ? " · " + esc(c.domain) : ""} · AM: ${esc(person(c.am).name)}`, "", `<div class="crumb"><button data-go="clients">Clients</button></div>`)}
+      <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button class="tab" role="tab" aria-selected="${tab === k}" data-ctab="${k}">${l}</button>`).join("")}</div>
+      ${tab === "overview" ? clientOverview(c, st) : tab === "onboarding" ? clientOnboarding(c, st) : tab === "projects" ? clientProjects(c) : panel("Activity timeline", timeline(S.activity.filter((a) => a.clientId === c.id)) || emptyBox("No activity"))}`;
+  }
+
+  function clientOverview(c, st) {
+    const next = st.list.find((s) => s.st !== "done");
+    return `<div class="stack">
+      ${!c.completed && next ? `<div class="callout ${st.blocked ? "bad" : ""}"><b>Next required action: ${esc(next.label)}</b>${esc(next.d || next.hint)} <button class="link" data-ctab="onboarding">Open onboarding →</button></div>` : ""}
+      ${c.completed && !S.projects.some((p) => p.clientId === c.id) ? `<div class="callout ok"><b>Onboarding complete — create the delivery project</b><button class="btn primary sm" style="margin-top:6px" data-act="new-project" data-id="${c.id}">Create project</button></div>` : ""}
+      <div class="grid g2">
+        ${panel("Profile", `<dl class="kv"><dt>Legal name</dt><dd>${esc(c.name)}</dd><dt>Website</dt><dd>${esc(c.website) || "—"}</dd><dt>Industry</dt><dd>${esc(c.industry) || "—"}</dd><dt>Primary contact</dt><dd>${esc(c.contact) || "—"} ${c.contactEmail ? `<span class="code">${esc(c.contactEmail)}</span>` : ""}</dd><dt>Account Manager</dt><dd>${esc(person(c.am).name)}</dd><dt>Created</dt><dd>${fmtDate(c.createdAt)}</dd></dl>`)}
+        ${panel("Internal team", c.team.length ? `<ul class="steps">${c.team.map((id) => `<li>${esc(person(id).name)} <span class="code">${esc(person(id).title)}</span></li>`).join("")}</ul>` : emptyBox("No team assigned"))}
+      </div></div>`;
+  }
+
+  function clientProjects(c) {
+    const ps = S.projects.filter((p) => p.clientId === c.id);
+    const locked = !c.completed;
+    return `${locked ? `<div class="callout warn" style="margin-bottom:12px"><b>Project creation is locked</b>Projects can be created once onboarding is completed.</div>` : ""}
+      ${panel("Projects", ps.length ? projectTable(ps) : emptyBox("No projects yet"), { flush: true, actions: !locked && can("projects.create") ? `<button class="btn primary sm" data-act="new-project" data-id="${c.id}">New project</button>` : "" })}`;
+  }
+
+  // ───────────────────────── Onboarding (Stage 1 workflow) ─────────────────────────
+  const ACCESS_TONE = { pending: "", requested: "acc", received: "acc", verified: "ok", rejected: "bad", not_required: "" };
+  function clientOnboarding(c, st) {
+    const manage = can("onboarding") && (c.am === me.id || can("*"));
+    const verify = can("access.verify");
+    const rail = `<section class="panel"><div class="body"><h3>Overall progress</h3>${progBar(st.progress)}<p class="muted" style="font-size:12px;margin:6px 0 12px">Status: ${pill(obStatus(c), c.completed ? "ok" : st.blocked ? "bad" : "acc")}</p>
+      <ol class="steps">${st.list.map((s) => `<li class="step ${s.st === "done" ? "done" : s.st === "blocked" ? "blocked" : s.st === "prog" ? "prog" : ""}"><span class="tick">${s.st === "done" ? "✓" : s.st === "blocked" ? "!" : ""}</span><span>${s.n}. ${esc(s.label)}${s.st !== "done" && s.d ? `<small>${esc(s.d)}</small>` : ""}</span></li>`).join("")}</ol></div></section>`;
+    if (!manage && !verify) {
+      return `<div class="split">${rail}<div class="callout"><b>Read-only</b>${ROLE_LABEL[me.role]} can follow onboarding but can't change it. Switch to the Account Manager persona to run the workflow.</div></div>`;
+    }
+    const dis = (ok) => (ok ? "" : "disabled");
+    const sec = [];
+    sec.push(panel("1 · Contract", `<div class="row">${c.contract === "signed" ? pill("Signed", "ok") : c.contract === "draft" ? pill("Recorded, unsigned", "warn") : pill("No contract")}
+      ${c.contract === "none" ? `<button class="btn sm" data-act="contract-draft" data-id="${c.id}" ${dis(manage)}>Record contract</button>` : ""}
+      ${c.contract === "draft" ? `<button class="btn primary sm" data-act="contract-sign" data-id="${c.id}" ${dis(manage)}>Mark signed</button>` : ""}</div>`, { desc: "Only authorised roles can mark a contract as signed." }));
+    sec.push(panel("4–5 · Onboarding questionnaire", `<div class="row">${c.questionnaire === "submitted" ? pill("Submitted", "ok") : c.questionnaire === "sent" ? pill("Sent · awaiting client", "acc") : pill("Not sent")}
+      ${c.questionnaire === "none" ? `<button class="btn sm" data-act="q-send" data-id="${c.id}" ${dis(manage)}>Send questionnaire link</button>` : ""}
+      ${c.questionnaire === "sent" ? `<button class="btn primary sm" data-act="q-answer" data-id="${c.id}" ${dis(manage)}>Record client's answers</button>` : ""}</div>
+      ${c.questionnaire === "submitted" ? `<dl class="kv" style="margin-top:10px">${Object.entries(c.answers).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>` : ""}`, { desc: "Business goals, products, markets, audiences, competitors and brand voice." }));
+    sec.push(panel("6–7 · Platform access", `<div class="tablewrap"><table><thead><tr><th>Platform</th><th>Status</th><th>Verified by</th><th></th></tr></thead><tbody>${c.access.map((a, i) => `<tr><td>${esc(a.label)}</td><td>${pill(a.status.replace("_", " "), ACCESS_TONE[a.status])}</td><td>${a.verifiedBy ? esc(person(a.verifiedBy).name) + ' <span class="code">manual</span>' : "—"}</td><td><div class="row" style="justify-content:flex-end">
+        ${["pending", "requested", "rejected"].includes(a.status) ? `<button class="btn sm" data-act="acc" data-id="${c.id}" data-i="${i}" data-s="received" ${dis(manage)}>Mark received</button>` : ""}
+        ${a.status === "received" ? `<button class="btn primary sm" data-act="acc" data-id="${c.id}" data-i="${i}" data-s="verified" ${dis(verify)}>Verify</button><button class="btn sm" data-act="acc" data-id="${c.id}" data-i="${i}" data-s="rejected" ${dis(verify)}>Reject</button>` : ""}
+      </div></td></tr>`).join("")}</tbody></table></div>`, { flush: true, desc: "Never store passwords here. Verification means a named person confirmed it manually; it's not a live API connection.", actions: manage && c.access.some((a) => ["pending", "requested"].includes(a.status)) ? `<button class="btn sm" data-act="acc-all" data-id="${c.id}">Mark all received</button>` : "" }));
+    sec.push(panel("8 · KPI targets", `${c.kpis.length ? `<div class="tablewrap"><table><thead><tr><th>Metric</th><th>Baseline → target</th><th>Client confirmation</th></tr></thead><tbody>${c.kpis.map((k) => `<tr><td>${esc(k.metric)}</td><td class="num">${esc(k.baseline)} → <b>${esc(k.target)}</b> ${esc(k.unit)}</td><td>${k.confirmedBy ? pill("Confirmed by " + k.confirmedBy, "ok") : pill("Awaiting client", "warn")}</td></tr>`).join("")}</tbody></table></div>` : emptyBox("No KPI targets", "Add at least one measurable target.")}
+      <form class="f" id="kpiForm" data-id="${c.id}" style="padding:12px 14px;border-top:1px solid var(--line-soft)"><div class="fields">
+        <label class="fld" for="k_metric">Metric<input id="k_metric" name="metric" placeholder="Organic sessions" required></label>
+        <label class="fld" for="k_base">Baseline<input id="k_base" name="baseline" type="number" step="any" required></label>
+        <label class="fld" for="k_target">Target<input id="k_target" name="target" type="number" step="any" required></label>
+        <label class="fld" for="k_unit">Unit<input id="k_unit" name="unit" placeholder="sessions / month" required></label>
+      </div><div class="row"><button class="btn sm" type="submit" ${dis(manage)}>Add KPI target</button>
+      ${c.kpis.some((k) => !k.confirmedBy) ? `<button class="btn primary sm" type="button" data-act="kpi-confirm" data-id="${c.id}" ${dis(can("kpi.confirm"))}>Record client confirmation</button>` : ""}</div></form>`, { flush: true, desc: "Targets need the client's confirmation before onboarding can be completed." }));
+    sec.push(panel("9–10 · Kickoffs & team", `<div class="stack">
+      <div class="row"><span style="min-width:140px">Client kickoff</span>${c.kickoffClient === "done" ? pill("Completed", "ok") : c.kickoffClient === "scheduled" ? pill("Scheduled", "acc") : pill("Not scheduled")}
+        ${c.kickoffClient === "none" ? `<button class="btn sm" data-act="kick" data-id="${c.id}" data-w="kickoffClient" data-s="scheduled" ${dis(manage)}>Schedule</button>` : ""}
+        ${c.kickoffClient === "scheduled" ? `<button class="btn primary sm" data-act="kick" data-id="${c.id}" data-w="kickoffClient" data-s="done" ${dis(manage)}>Complete with notes</button>` : ""}</div>
+      <div class="row"><span style="min-width:140px">Internal team</span>${c.team.map((id) => pill(person(id).name, "acc")).join(" ") || '<span class="muted">No one assigned</span>'}
+        <select class="fld" id="teamSel" aria-label="Team member" ${dis(manage)}>${PEOPLE.filter((p) => !c.team.includes(p.id) && ["EMPLOYEE", "TEAM_LEAD", "PROJECT_MANAGER"].includes(p.role)).map((p) => `<option value="${p.id}">${esc(p.name)} — ${esc(p.title)}</option>`).join("")}</select>
+        <button class="btn sm" data-act="team-add" data-id="${c.id}" ${dis(manage)}>Assign</button></div>
+      <div class="row"><span style="min-width:140px">Internal kickoff</span>${c.kickoffInternal === "done" ? pill("Completed", "ok") : c.kickoffInternal === "scheduled" ? pill("Scheduled", "acc") : pill("Not scheduled")}
+        ${c.kickoffInternal === "none" ? `<button class="btn sm" data-act="kick" data-id="${c.id}" data-w="kickoffInternal" data-s="scheduled" ${dis(manage)}>Schedule</button>` : ""}
+        ${c.kickoffInternal === "scheduled" ? `<button class="btn primary sm" data-act="kick" data-id="${c.id}" data-w="kickoffInternal" data-s="done" ${dis(manage)}>Complete with responsibilities</button>` : ""}</div></div>`));
+    const ready = STEP_DEFS.slice(0, 10).every(([k]) => st.byKey[k].st === "done");
+    sec.push(panel("11–12 · Review & completion", c.completed ? `<div class="callout ok"><b>Onboarding completed ${fmtDate(c.completedAt)}</b>The client is Active and project creation is enabled.</div>` : `<div class="stack">
+      <p class="muted" style="margin:0">The review only passes when steps 1–10 are complete. Completion is checked again on the server: all access verified, all KPIs client-confirmed.</p>
+      <div class="row"><button class="btn sm" data-act="review" data-id="${c.id}" ${dis(manage)}>${c.reviewed && ready ? "Review passed ✓" : "Pass onboarding review"}</button>
+      <button class="btn primary sm" data-act="complete" data-id="${c.id}" ${dis(manage)}>Complete onboarding</button></div></div>`));
+    return `<div class="split">${rail}<div class="stack">${sec.join("")}</div></div>`;
+  }
+
+  function viewOnboardingBoard() {
+    const rows = S.clients.slice().sort((a, b) => Number(a.completed) - Number(b.completed));
+    return `${head("Client onboarding", "Contract → client → profile → questionnaire → access → verification → KPIs → kickoffs → review → completion → project.")}
+      ${panel("", rows.length ? `<div class="tablewrap"><table><thead><tr><th>Client</th><th>Status</th><th>Progress</th><th>Current step</th><th>AM</th></tr></thead><tbody>${rows.map((c) => { const st = steps(c); const n = st.list.find((s) => s.st !== "done"); return `<tr><td><button class="link" data-client="${c.id}" data-tab="onboarding">${esc(c.name)}</button></td><td>${pill(obStatus(c), c.completed ? "ok" : st.blocked ? "bad" : "acc")}</td><td style="width:200px">${progBar(st.progress)}</td><td>${n ? esc(n.label) + (n.d ? `<div class="code">${esc(n.d)}</div>` : "") : "Done"}</td><td>${esc(person(c.am).name)}</td></tr>`; }).join("")}</tbody></table></div>` : emptyBox("No onboardings", "Create a client to start one."), { flush: true })}`;
+  }
+
+  // ───────────────────────── Projects & tasks ─────────────────────────
+  const TEMPLATE = [
+    ["Baseline SEO audit", 0, 5, true, false],
+    ["Keyword research", 0, 7, true, false],
+    ["Technical fixes roadmap", 5, 5, true, true],
+    ["On-page optimisation of priority pages", 12, 14, true, false],
+    ["Month 1 performance report", 25, 5, true, true],
+  ];
+  const progressOf = (pid) => { const ts = S.tasks.filter((t) => t.projectId === pid && t.status !== "cancelled"); return ts.length ? Math.round((ts.filter((t) => t.status === "completed").length / ts.length) * 100) : 0; };
+  const projectTable = (ps) => `<div class="tablewrap"><table><thead><tr><th>Project</th><th>Client</th><th>Manager</th><th>Progress</th><th>Open / overdue</th></tr></thead><tbody>${ps.map((p) => { const ts = S.tasks.filter((t) => t.projectId === p.id && !["completed", "cancelled"].includes(t.status)); return `<tr><td><button class="link" data-project="${p.id}">${esc(p.name)}</button><div class="code">${esc(p.code)}</div></td><td>${esc(clientName(p.clientId))}</td><td>${esc(person(p.pm).name)}</td><td style="width:180px">${progBar(progressOf(p.id))}</td><td class="num">${ts.length} / <span style="${ts.filter(isLate).length ? "color:var(--bad)" : ""}">${ts.filter(isLate).length}</span></td></tr>`; }).join("")}</tbody></table></div>`;
+
+  function viewProjects() {
+    const ps = S.projects.filter((p) => can("*") || ["PROJECT_MANAGER", "ACCOUNT_MANAGER", "FINANCE"].includes(me.role) || S.tasks.some((t) => t.projectId === p.id && t.assignee === me.id));
+    return `${head("Projects", "Progress is derived from completed tasks. New projects are only possible for clients whose onboarding is complete.")}
+      ${panel("", ps.length ? projectTable(ps) : emptyBox("No projects yet", "Complete a client's onboarding, then create its project from the client page."), { flush: true })}`;
+  }
+
+  function createProject(clientId) {
+    const c = S.clients.find((x) => x.id === clientId);
+    if (!can("projects.create")) return toast(`${ROLE_LABEL[me.role]} can't create projects.`, true);
+    if (!c.completed) return toast("Projects can only be created after client onboarding is completed.", true);
+    S.seq.project++;
+    const p = { id: uid("p"), code: "PRJ-" + pad(S.seq.project), name: `${c.name} SEO Retainer`, clientId, pm: "u_pm", createdAt: nowIso() };
+    S.projects.push(p);
+    const start = today();
+    TEMPLATE.forEach(([title, off, dur, review, client]) => {
+      S.seq.task++;
+      S.tasks.push({ id: uid("t"), num: S.seq.task, projectId: p.id, clientId, title, assignee: c.team.find((id) => person(id).role === "EMPLOYEE") || null, reviewer: "u_pm", status: "backlog", requiresReview: review, requiresClient: client, due: addDays(start, off + dur), versions: [] });
+    });
+    log(`Project ${p.name} created from the "SEO onboarding & foundation" template (5 tasks)`, clientId);
+    route = { page: "project", id: p.id };
+    commit(`Project ${p.name} created`);
+  }
+
+  function viewProject() {
+    const p = S.projects.find((x) => x.id === route.id);
+    if (!p) return emptyBox("Project not found");
+    const ts = S.tasks.filter((t) => t.projectId === p.id);
+    const cols = ["backlog", "ready", "in_progress", "blocked", "internal_review", "client_approval", "completed"];
+    return `${head(`${esc(p.name)}`, `<span class="code">${esc(p.code)}</span> · ${esc(clientName(p.clientId))} · PM: ${esc(person(p.pm).name)}`, can("tasks.create") ? `<button class="btn primary" data-act="new-task" data-id="${p.id}">New task</button>` : "", `<div class="crumb"><button data-go="projects">Projects</button></div>`)}
+      <div class="grid g4" style="margin-bottom:16px">${stat("Completion", progressOf(p.id) + "%", "Completed ÷ non-cancelled tasks")}${stat("Tasks", ts.length)}${stat("Overdue", ts.filter(isLate).length, "", ts.some(isLate))}${stat("In review", ts.filter((t) => ["internal_review", "client_approval"].includes(t.status)).length)}</div>
+      <div class="board">${cols.map((s) => { const list = ts.filter((t) => t.status === s); return `<div class="col"><h4>${TASK_STATUS[s][0]}<span>${list.length}</span></h4>${list.map((t) => `<button class="card ${isLate(t) ? "late" : ""}" data-task="${t.id}"><div class="t">${esc(t.title)}</div><div class="m">T-${t.num} · ${t.assignee ? esc(person(t.assignee).name) : "Unassigned"} · due ${fmtDate(t.due)}</div></button>`).join("")}</div>`; }).join("")}</div>`;
+  }
+
+  function taskTable(ts) {
+    return `<div class="tablewrap"><table><thead><tr><th>Task</th><th>Status</th><th>Assignee</th><th>Client</th><th>Due</th></tr></thead><tbody>${ts.map((t) => `<tr><td><button class="link" data-task="${t.id}">${esc(t.title)}</button> <span class="code">T-${t.num}</span></td><td>${taskPill(t.status)}</td><td>${t.assignee ? esc(person(t.assignee).name) : '<span class="muted">Unassigned</span>'}</td><td>${esc(clientName(t.clientId))}</td><td class="num" style="${isLate(t) ? "color:var(--bad)" : ""}">${fmtDate(t.due)}</td></tr>`).join("")}</tbody></table></div>`;
+  }
+
+  let taskView = "mine";
+  function viewTasks() {
+    const all = S.tasks.filter((t) => t.status !== "cancelled");
+    const sets = {
+      mine: all.filter((t) => t.assignee === me.id && t.status !== "completed"),
+      review: S.tasks.filter((t) => t.status === "internal_review" && t.reviewer === me.id),
+      all: can("*") || ["PROJECT_MANAGER", "TEAM_LEAD", "ACCOUNT_MANAGER"].includes(me.role) ? all : all.filter((t) => t.assignee === me.id),
+    };
+    return `${head("Tasks & work", "One task system across every project. Status changes follow the workflow: work that needs review can't be marked completed directly.")}
+      <div class="tabs">${[["mine", "My tasks"], ["review", "Awaiting my review"], ["all", "All I can see"]].map(([k, l]) => `<button class="tab" aria-selected="${taskView === k}" data-tview="${k}">${l} <span class="code">${sets[k].length}</span></button>`).join("")}</div>
+      ${panel("", sets[taskView].length ? taskTable(sets[taskView]) : emptyBox("Nothing here", taskView === "mine" ? "Tip: switch to Jordan Blake (Employee) to see the specialist's queue." : ""), { flush: true })}`;
+  }
+
+  // Task drawer + workflow
+  let drawer = null;
+  function renderOverlay() {
+    const host = document.getElementById("overlay");
+    if (!drawer) { host.innerHTML = ""; return; }
+    if (drawer.type === "task") host.innerHTML = taskDrawer();
+    if (drawer.type === "newTask") host.innerHTML = newTaskDrawer();
+    if (drawer.type === "reset") host.innerHTML = resetDrawer();
+  }
+  const isManager = (t) => can("*") || (S.projects.find((p) => p.id === t.projectId) || {}).pm === me.id || me.role === "TEAM_LEAD";
+  const canWork = (t) => t.assignee === me.id || isManager(t);
+  const approverFor = (a) => a.stage === "internal" ? a.approver : (S.clients.find((c) => c.id === a.clientId) || {}).am;
+
+  function taskDrawer() {
+    const t = S.tasks.find((x) => x.id === drawer.id);
+    if (!t) { drawer = null; return ""; }
+    const open = S.approvals.find((a) => a.taskId === t.id && a.status === "submitted");
+    const deps = [];
+    if (canWork(t)) {
+      if (["backlog", "ready", "blocked"].includes(t.status)) deps.push(`<button class="btn primary" data-act="t-move" data-s="in_progress">Start work</button>`);
+      if (t.status === "in_progress" && (t.requiresReview || t.requiresClient)) deps.push(`<button class="btn primary" data-act="t-submit-ask">Submit for review</button>`);
+      if (t.status === "in_progress" && !t.requiresReview && !t.requiresClient) deps.push(`<button class="btn primary" data-act="t-move" data-s="completed">Mark completed</button>`);
+      if (t.status === "in_progress") deps.push(`<button class="btn" data-act="t-move" data-s="completed">Try “Mark completed”</button>`);
+    }
+    let decision = "";
+    if (open) {
+      const mine = approverFor(open) === me.id || can("*");
+      const self = open.requester === me.id && !can("*");
+      decision = `<div class="callout"><b>Awaiting ${open.stage === "internal" ? "internal review" : "client approval"} · v${open.version}</b>${open.stage === "internal" ? "Reviewer: " + esc(person(open.approver).name) : "The Account Manager records the client's decision."}</div>
+        ${mine && !self ? `<form class="f" id="decideForm" data-a="${open.id}">${open.stage === "client" ? `<div class="fields"><label class="fld" for="d_who">Client decision-maker<input id="d_who" name="who" value="${esc((S.clients.find((c) => c.id === t.clientId) || {}).contact || "")}" required></label><label class="fld" for="d_via">Communicated via<select id="d_via" name="via"><option>Email</option><option>Call</option><option>Meeting</option><option>WhatsApp</option></select></label></div>` : ""}
+          <label class="fld" for="d_note">${open.stage === "client" ? "Client feedback" : "Feedback"} (required to request changes)<textarea id="d_note" name="note"></textarea></label>
+          <div class="row"><button class="btn primary" name="decision" value="approved" type="submit">Approve</button><button class="btn" name="decision" value="changes" type="submit">Request changes</button></div></form>`
+          : self ? `<p class="muted">You submitted this version, so you can't approve it. Switch to ${esc(person(open.approver).name)} to review.</p>` : `<p class="muted">Switch to ${esc(person(approverFor(open)).name)} to record this decision.</p>`}`;
+    }
+    return `<div class="drawer-bg" data-act="close"></div><aside class="drawer" role="dialog" aria-label="Task">
+      <div class="row" style="justify-content:space-between"><span class="code">T-${t.num} · ${esc(clientName(t.clientId))}</span><button class="btn sm" data-act="close">Close</button></div>
+      <h1>${esc(t.title)}</h1><div class="row">${taskPill(t.status)} ${isLate(t) ? pill("Overdue", "bad") : ""}</div>
+      <dl class="kv"><dt>Assignee</dt><dd>${t.assignee ? esc(person(t.assignee).name) : "Unassigned"}</dd><dt>Reviewer</dt><dd>${esc(person(t.reviewer).name)}</dd><dt>Due</dt><dd>${fmtDate(t.due)}</dd><dt>Workflow</dt><dd>${[t.requiresReview && "Internal review", t.requiresClient && "Client approval"].filter(Boolean).join(" → ") || "No review"}</dd></dl>
+      ${isManager(t) && t.status !== "completed" ? `<div class="row"><label class="fld" for="as_sel" style="flex-direction:row;align-items:center;gap:8px">Assign to<select id="as_sel">${PEOPLE.map((p) => `<option value="${p.id}" ${p.id === t.assignee ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label><button class="btn sm" data-act="t-assign">Save</button></div>` : ""}
+      ${deps.length ? `<div class="row">${deps.join("")}</div>` : !open && t.status !== "completed" ? `<p class="muted">Only the assignee or the project manager can work on this task.</p>` : ""}
+      ${drawer.submit ? `<form class="f" id="submitForm"><label class="fld" for="s_note">What changed / notes for the reviewer<textarea id="s_note" name="note" required></textarea></label><label class="fld" for="s_link">Link to the work<input id="s_link" name="link" placeholder="https://docs.example.com/…"></label><div class="row"><button class="btn primary" type="submit">Submit v${t.versions.length + 1}</button><button class="btn" type="button" data-act="t-submit-cancel">Cancel</button></div></form>` : ""}
+      ${decision}
+      <div><h3>Versions & feedback</h3>${t.versions.length ? `<div class="stack" style="gap:8px">${t.versions.slice().reverse().map((v) => `<div class="version"><b>Version ${v.n}</b> <span class="code">${fmtWhen(v.at)}</span><div>${esc(v.note)}</div>${v.link ? `<div class="code">${esc(v.link)}</div>` : ""}${(v.feedback || []).map((f) => `<div class="fb"><b>${esc(f.result)}</b> by ${esc(f.by)} — ${esc(f.note || "No comment")}</div>`).join("")}</div>`).join("")}</div>` : '<p class="muted">Nothing submitted yet.</p>'}</div>
+    </aside>`;
+  }
+
+  function newTaskDrawer() {
+    return `<div class="drawer-bg" data-act="close"></div><aside class="drawer" role="dialog" aria-label="New task"><div class="row" style="justify-content:space-between"><h1>New task</h1><button class="btn sm" data-act="close">Close</button></div>
+      <form class="f" id="newTaskForm"><label class="fld" for="nt_title">Title<input id="nt_title" name="title" required></label>
+      <div class="fields"><label class="fld" for="nt_as">Assignee<select id="nt_as" name="assignee">${PEOPLE.map((p) => `<option value="${p.id}" ${p.role === "EMPLOYEE" ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
+      <label class="fld" for="nt_due">Due date<input id="nt_due" name="due" type="date" value="${addDays(today(), 7)}"></label></div>
+      <label class="row" for="nt_rev" style="font-size:13px"><input type="checkbox" id="nt_rev" name="review" checked> Requires internal review</label>
+      <label class="row" for="nt_cli" style="font-size:13px"><input type="checkbox" id="nt_cli" name="client"> Requires client approval</label>
+      <button class="btn primary" type="submit">Create task</button></form></aside>`;
+  }
+
+  function resetDrawer() {
+    return `<div class="drawer-bg" data-act="close"></div><aside class="drawer" role="dialog" aria-label="Reset demo"><h1>Reset demo data?</h1><p>This removes every client, project, task, approval, retainer and invoice for everyone who uses this page. It can't be undone.</p><div class="row"><button class="btn danger" data-act="reset-do">Delete all demo data</button><button class="btn" data-act="close">Keep data</button></div></aside>`;
+  }
+
+  function moveTask(t, to) {
+    const label = TASK_STATUS[to][0];
+    if (to === "completed" && (t.requiresReview || t.requiresClient)) return toast("This task requires review. Submit it for review instead of completing it directly.", true);
+    t.status = to;
+    log(`Task "${t.title}" → ${label}`, t.clientId);
+    commit("Status updated");
+  }
+
+  // ───────────────────────── Approvals ─────────────────────────
+  function viewApprovals() {
+    const pending = S.approvals.filter((a) => a.status === "submitted");
+    const mine = pending.filter((a) => approverFor(a) === me.id);
+    const rows = (list) => list.length ? `<div class="tablewrap"><table><thead><tr><th>Deliverable</th><th>Client</th><th>Stage</th><th>Version</th><th>Requested by</th><th>Status</th></tr></thead><tbody>${list.map((a) => { const t = S.tasks.find((x) => x.id === a.taskId) || {}; return `<tr><td><button class="link" data-task="${t.id}">${esc(t.title)}</button></td><td>${esc(clientName(a.clientId))}</td><td>${pill(a.stage === "internal" ? "Internal" : "Client", "info")}</td><td class="num">v${a.version}</td><td>${esc(person(a.requester).name)}</td><td>${pill(a.status.replace("_", " "), a.status === "approved" ? "ok" : a.status === "changes" ? "warn" : "acc")}</td></tr>`; }).join("")}</tbody></table></div>` : emptyBox("Nothing waiting");
+    return `${head("Approvals", "Internal reviews and client decisions. No one can approve their own submission; client decisions record who decided and how they told us.")}
+      <div class="stack">${panel("Awaiting my decision", rows(mine), { flush: true })}${panel("All requests", rows(S.approvals.slice().reverse()), { flush: true })}</div>`;
+  }
+
+  function submitTask(t, note, link) {
+    if (!note.trim()) return toast("Describe what changed for the reviewer.", true);
+    if (t.reviewer === me.id && !can("*")) return toast("You can't review your own work. Ask the PM to set another reviewer.", true);
+    const n = t.versions.length + 1;
+    t.versions.push({ n, note, link, at: nowIso(), by: me.id, feedback: [] });
+    const stage = t.requiresReview ? "internal" : "client";
+    S.approvals.push({ id: uid("a"), taskId: t.id, clientId: t.clientId, version: n, stage, approver: t.reviewer, requester: me.id, status: "submitted", at: nowIso() });
+    t.status = stage === "internal" ? "internal_review" : "client_approval";
+    log(`"${t.title}" v${n} submitted for ${stage === "internal" ? "internal review" : "client approval"}`, t.clientId);
+    drawer.submit = false;
+    commit("Submitted for review");
+  }
+
+  function decide(aid, decision, note, who, via) {
+    const a = S.approvals.find((x) => x.id === aid);
+    const t = S.tasks.find((x) => x.id === a.taskId);
+    if (decision === "changes" && !note.trim()) return toast("Add feedback explaining the requested changes.", true);
+    if (a.stage === "client" && !who.trim()) return toast("Record who at the client made this decision.", true);
+    a.status = decision === "approved" ? "approved" : "changes";
+    const v = t.versions.find((x) => x.n === a.version);
+    const by = a.stage === "client" ? `${who} (client, via ${via})` : me.name;
+    v.feedback.push({ result: decision === "approved" ? "Approved" : "Changes requested", by, note });
+    if (decision === "approved") {
+      if (a.stage === "internal" && t.requiresClient) {
+        S.approvals.push({ id: uid("a"), taskId: t.id, clientId: t.clientId, version: a.version, stage: "client", approver: null, requester: me.id, status: "submitted", at: nowIso() });
+        t.status = "client_approval";
+        log(`"${t.title}" v${a.version} approved internally; client approval requested`, t.clientId);
+        return commit("Approved — client approval requested");
+      }
+      t.status = "completed";
+      log(`${by} approved "${t.title}" v${a.version}; task completed`, t.clientId);
+      return commit("Approved — task completed");
+    }
+    t.status = "in_progress";
+    log(`${by} requested changes to "${t.title}" v${a.version}`, t.clientId);
+    commit("Changes requested — sent back to the assignee");
+  }
+
+  // ───────────────────────── Retainers & recurrence ─────────────────────────
+  const RECURRING = [["Monthly SEO audit", 10, true], ["Keyword tracking update", 3, false], ["Monthly client performance report", 5, true]];
+  function viewRetainers() {
+    const month = today().slice(0, 7);
+    return `${head("Services & retainers", "Each active retainer generates its monthly deliverables. Running the scheduler twice never creates duplicates: every task carries a unique service + template + month key.", (can("jobs.run") ? `<button class="btn primary" data-act="run-jobs">Run scheduler for ${month}</button>` : ""))}
+      <div class="stack">
+      ${panel("Active retainers", S.services.length ? `<div class="tablewrap"><table><thead><tr><th>Client</th><th>Service</th>${can("view.money") ? "<th>Monthly amount</th>" : ""}<th>This month's tasks</th><th>Status</th></tr></thead><tbody>${S.services.map((s) => `<tr><td>${esc(clientName(s.clientId))}</td><td>${esc(s.name)}</td>${can("view.money") ? `<td class="num">${money(s.amount)}</td>` : ""}<td class="num">${S.tasks.filter((t) => t.recurringKey && t.recurringKey.startsWith(s.id + "|") && t.recurringKey.endsWith("|" + month)).length} / ${RECURRING.length}</td><td>${pill("Active", "ok")}</td></tr>`).join("")}</tbody></table></div>` : emptyBox("No retainers yet"), { flush: true })}
+      ${can("retainers") ? panel("Add SEO retainer", S.clients.filter((c) => c.completed).length ? `<form class="f" id="svcForm"><div class="fields"><label class="fld" for="sv_c">Client<select id="sv_c" name="client">${S.clients.filter((c) => c.completed).map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label><label class="fld" for="sv_a">Monthly amount (USD)<input id="sv_a" name="amount" type="number" min="0" step="1" value="2500"></label></div><div><button class="btn primary sm" type="submit">Add retainer</button></div></form>` : emptyBox("No eligible clients", "Retainers can be added to clients whose onboarding is complete.")) : ""}
+      ${panel("Recurring templates · SEO", `<div class="tablewrap"><table><thead><tr><th>Deliverable</th><th>Frequency</th><th>Due</th><th>Review</th></tr></thead><tbody>${RECURRING.map(([n, d, r]) => `<tr><td>${n}</td><td>Monthly</td><td>Day ${d + 1} of the month (moved off weekends)</td><td>${r ? "Internal review" : "None"}</td></tr>`).join("")}</tbody></table></div>`, { flush: true })}
+      </div>`;
+  }
+  function runScheduler() {
+    const month = today().slice(0, 7);
+    let created = 0, existing = 0;
+    S.services.filter((s) => s.status === "active").forEach((s) => {
+      const c = S.clients.find((x) => x.id === s.clientId);
+      const proj = S.projects.find((p) => p.clientId === s.clientId);
+      RECURRING.forEach(([name, dueDay, review], i) => {
+        const key = `${s.id}|${i}|${month}`;
+        if (S.tasks.some((t) => t.recurringKey === key)) { existing++; return; }
+        let due = `${month}-${pad(dueDay + 1, 2)}`;
+        const wd = new Date(due + "T00:00:00Z").getUTCDay();
+        if (wd === 6) due = addDays(due, 2); else if (wd === 0) due = addDays(due, 1);
+        S.seq.task++;
+        S.tasks.push({ id: uid("t"), num: S.seq.task, projectId: proj ? proj.id : null, clientId: s.clientId, title: `${name} — ${month}`, assignee: "u_tl", reviewer: "u_pm", status: "ready", requiresReview: review, requiresClient: false, due, versions: [], recurringKey: key });
+        created++;
+      });
+      if (c) log(`Scheduler: ${month} deliverables checked for ${c.name}`, c.id);
+    });
+    commit(`Scheduler run: ${created} task(s) created, ${existing} already existed`);
+  }
+
+  // ───────────────────────── Finance ─────────────────────────
+  function viewFinance() {
+    if (!can("finance") && !can("view.money")) return head("Finance & billing", "") + `<div class="callout bad"><b>Access denied</b>${ROLE_LABEL[me.role]} can't see financial records.</div>`;
+    const inv = S.invoices.slice().reverse();
+    const out = S.invoices.filter((i) => ["issued", "partial"].includes(i.status)).reduce((a, i) => a + i.total - i.paid, 0);
+    const collected = S.invoices.reduce((a, i) => a + i.paid, 0);
+    const invoiced = S.invoices.filter((i) => i.status !== "draft").reduce((a, i) => a + i.total, 0);
+    const manage = can("finance");
+    return `${head("Finance & billing", "Operational tracking of invoiced, collected and outstanding amounts. Not an accounting system.")}
+      <div class="grid g4" style="margin-bottom:16px">${stat("Invoiced", money(invoiced))}${stat("Collected", money(collected))}${stat("Outstanding", money(out))}${stat("Contracted / month", money(S.services.reduce((a, s) => a + s.amount, 0)), "Contracted value, not revenue")}</div>
+      <div class="stack">
+      ${panel("Invoices", inv.length ? `<div class="tablewrap"><table><thead><tr><th>Invoice</th><th>Client</th><th>Due</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th></th></tr></thead><tbody>${inv.map((i) => `<tr><td class="num">${esc(i.number)}</td><td>${esc(clientName(i.clientId))}</td><td class="num">${fmtDate(i.due)}</td><td class="num">${money(i.total)}</td><td class="num">${money(i.paid)}</td><td class="num">${money(i.total - i.paid)}</td><td>${pill({ draft: "Draft", issued: "Issued", partial: "Partially paid", paid: "Paid" }[i.status], i.status === "paid" ? "ok" : i.status === "partial" ? "warn" : i.status === "issued" ? "acc" : "")}</td><td><div class="row" style="justify-content:flex-end">${manage && i.status === "draft" ? `<button class="btn sm" data-act="inv-issue" data-id="${i.id}">Issue</button>` : ""}${manage && ["issued", "partial"].includes(i.status) ? `<input class="fld" style="width:96px" type="number" min="1" step="0.01" id="pay_${i.id}" aria-label="Payment amount" placeholder="Amount"><button class="btn primary sm" data-act="inv-pay" data-id="${i.id}">Record payment</button>` : ""}</div></td></tr>`).join("")}</tbody></table></div>` : emptyBox("No invoices yet"), { flush: true })}
+      ${manage ? panel("New invoice", S.clients.length ? `<form class="f" id="invForm"><div class="fields"><label class="fld" for="iv_c">Client<select id="iv_c" name="client">${S.clients.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label><label class="fld" for="iv_d">Description<input id="iv_d" name="desc" value="SEO retainer — ${new Date().toLocaleString("en-GB", { month: "long", year: "numeric" })}" required></label><label class="fld" for="iv_a">Amount (USD)<input id="iv_a" name="amount" type="number" min="1" step="0.01" value="2500" required></label><label class="fld" for="iv_t">Tax %<input id="iv_t" name="tax" type="number" min="0" max="100" step="0.01" value="10"></label></div><div><button class="btn primary sm" type="submit">Save draft invoice</button></div></form>` : emptyBox("Create a client first")) : `<div class="callout">Account Managers can see billing figures but only Finance can create invoices or record payments.</div>`}
+      </div>`;
+  }
+
+  // ───────────────────────── Team & activity ─────────────────────────
+  function viewTeam() {
+    const rows = PEOPLE.map((p) => `<tr><td>${esc(p.name)}<div class="code">${esc(p.title)}</div></td><td>${pill(ROLE_LABEL[p.role], p.role === "SUPER_ADMIN" ? "info" : "acc")}</td><td>${S.tasks.filter((t) => t.assignee === p.id && !["completed", "cancelled"].includes(t.status)).length}</td><td>${p.id === me.id ? pill("Viewing as", "ok") : `<button class="btn sm" data-persona="${p.id}">View as</button>`}</td></tr>`).join("");
+    const matrix = [["Create clients & run onboarding", "ACCOUNT_MANAGER"], ["Verify platform access", "ACCOUNT_MANAGER PROJECT_MANAGER TEAM_LEAD"], ["Create projects", "ACCOUNT_MANAGER PROJECT_MANAGER"], ["Review deliverables", "PROJECT_MANAGER TEAM_LEAD"], ["Record client decisions", "ACCOUNT_MANAGER"], ["See billing figures", "ACCOUNT_MANAGER FINANCE"], ["Create invoices & payments", "FINANCE"]];
+    const roles = Object.keys(ROLE_LABEL);
+    return `${head("Team & roles", "Demo personas. In the full app, people are invited by e-mail, activate their own accounts, and every permission is enforced on the server.")}
+      <div class="stack">${panel("People", `<div class="tablewrap"><table><thead><tr><th>Person</th><th>Role</th><th>Open tasks</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`, { flush: true })}
+      ${panel("What each role can do", `<div class="tablewrap"><table><thead><tr><th>Capability</th>${roles.map((r) => `<th>${ROLE_LABEL[r]}</th>`).join("")}</tr></thead><tbody>${matrix.map(([cap, who]) => `<tr><td>${cap}</td>${roles.map((r) => `<td>${r === "SUPER_ADMIN" || who.split(" ").includes(r) ? "✓" : '<span class="muted">—</span>'}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`, { flush: true, desc: "Employees only see clients and projects they work on." })}</div>`;
+  }
+  function viewActivity() {
+    return `${head("Activity log", "Every change in the demo, newest first.")}${panel("", S.activity.length ? timeline(S.activity) : emptyBox("No activity yet"))}`;
+  }
+
+  // ───────────────────────── Events ─────────────────────────
+  function toast(msg, bad = false) {
+    const host = document.getElementById("toastHost");
+    host.innerHTML = `<div class="toast ${bad ? "bad" : ""}" role="${bad ? "alert" : "status"}">${esc(msg)}</div>`;
+    clearTimeout(toast.t);
+    toast.t = setTimeout(() => (host.innerHTML = ""), bad ? 6000 : 3000);
+  }
+  const findClient = (id) => S.clients.find((c) => c.id === id);
+  const canManageOb = (c) => can("onboarding") && (c.am === me.id || can("*"));
+
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-go],[data-client],[data-project],[data-task],[data-ctab],[data-tview],[data-act],[data-persona]");
+    if (!el || el.disabled) return;
+    const d = el.dataset;
+    if (d.go) { formError = ""; return go({ page: d.go }); }
+    if (d.client) return go({ page: "client", id: d.client, tab: d.tab || "overview" });
+    if (d.project) return go({ page: "project", id: d.project });
+    if (d.task) { drawer = { type: "task", id: d.task }; return renderOverlay(); }
+    if (d.ctab) { route.tab = d.ctab; return render(); }
+    if (d.tview) { taskView = d.tview; return render(); }
+    if (d.persona) return setPersona(d.persona);
+    const c = d.id ? findClient(d.id) : null;
+    switch (d.act) {
+      case "close": drawer = null; return renderOverlay();
+      case "reset-ask": drawer = { type: "reset" }; return renderOverlay();
+      case "reset-do": S = empty(); drawer = null; route = { page: "dashboard" }; return commit("Demo data cleared");
+      case "contract-draft": c.contract = "draft"; log(`Contract recorded for ${c.name}`, c.id); return commit("Contract recorded");
+      case "contract-sign": c.contract = "signed"; log(`Contract for ${c.name} marked as signed`, c.id); return commit("Contract marked as signed");
+      case "q-send": c.questionnaire = "sent"; log("Onboarding questionnaire link sent", c.id); return commit("Questionnaire link created and sent (single-use, 30 days)");
+      case "q-answer": c.questionnaire = "submitted"; c.answers = { "Business goals": "Grow qualified organic leads", "Products and services": "Industrial widgets and spare parts", "Target markets": "US and Canada", "Target audiences": "Procurement managers", "Competitors": "WidgetCo, PartsHub", "Brand voice": "Practical and expert" }; log("Client submitted the onboarding questionnaire", c.id); return commit("Answers recorded");
+      case "acc": {
+        const a = c.access[Number(d.i)];
+        if (d.s === "verified" && a.status !== "received") return toast("Access must be marked as received before it can be verified.", true);
+        if ((d.s === "verified" || d.s === "rejected") && !can("access.verify")) return toast("Only authorised team members may verify access.", true);
+        a.status = d.s; a.verifiedBy = d.s === "verified" ? me.id : null;
+        log(d.s === "verified" ? `Access verified (manual): ${a.label}` : `${a.label} access ${d.s.replace("_", " ")}`, c.id);
+        return commit(d.s === "verified" ? "Access verified" : d.s === "rejected" ? "Access rejected — onboarding is blocked until it's fixed" : "Updated");
+      }
+      case "acc-all": c.access.forEach((a) => { if (["pending", "requested"].includes(a.status)) a.status = "received"; }); log("All platform access marked as received", c.id); return commit("All access marked received — now verify each item");
+      case "kpi-confirm": {
+        if (!can("kpi.confirm")) return toast("Only Account Managers record client confirmations.", true);
+        const who = c.contact || "Client contact";
+        c.kpis.forEach((k) => { if (!k.confirmedBy) k.confirmedBy = who; });
+        log(`${who} confirmed the KPI targets via e-mail`, c.id); return commit("Client confirmation recorded");
+      }
+      case "kick": c[d.w] = d.s; log(`${d.w === "kickoffClient" ? "Client" : "Internal"} kickoff ${d.s === "done" ? "completed" : "scheduled"}`, c.id); return commit(d.s === "done" ? "Meeting completed" : "Meeting scheduled");
+      case "team-add": { const v = document.getElementById("teamSel").value; if (!v) return; c.team.push(v); log(`${person(v).name} assigned to the client team`, c.id); return commit("Team member assigned"); }
+      case "review": {
+        const st = steps(c);
+        const inc = st.list.slice(0, 10).filter((s) => s.st !== "done");
+        if (inc.length) return toast(`Review can't pass yet. Incomplete: ${inc.map((s) => s.label).join(", ")}.`, true);
+        c.reviewed = true; log("Onboarding review passed", c.id); return commit("Onboarding review passed");
+      }
+      case "complete": {
+        const st = steps(c);
+        if (st.byKey.ACCESS_OK.st !== "done") return toast("All required access items must be verified before onboarding can be completed.", true);
+        if (st.byKey.KPI.st !== "done") return toast("KPI targets require client confirmation before onboarding can be completed.", true);
+        const inc = st.list.slice(0, 11).filter((s) => s.st !== "done");
+        if (inc.length) return toast(`Can't complete onboarding. Incomplete: ${inc.map((s) => s.label).join(", ")}.`, true);
+        c.completed = true; c.completedAt = nowIso(); log("Onboarding completed — project creation enabled", c.id); return commit("Onboarding completed. The client is now Active.");
+      }
+      case "new-project": return createProject(d.id);
+      case "new-task": drawer = { type: "newTask", projectId: d.id }; return renderOverlay();
+      case "t-move": { const t = S.tasks.find((x) => x.id === drawer.id); return moveTask(t, d.s); }
+      case "t-submit-ask": drawer.submit = true; return renderOverlay();
+      case "t-submit-cancel": drawer.submit = false; return renderOverlay();
+      case "t-assign": { const t = S.tasks.find((x) => x.id === drawer.id); t.assignee = document.getElementById("as_sel").value; log(`Task "${t.title}" assigned to ${person(t.assignee).name}`, t.clientId); return commit("Task reassigned"); }
+      case "run-jobs": return runScheduler();
+      case "inv-issue": { const i = S.invoices.find((x) => x.id === d.id); i.status = "issued"; log(`Invoice ${i.number} issued`, i.clientId); return commit("Invoice issued"); }
+      case "inv-pay": {
+        const i = S.invoices.find((x) => x.id === d.id);
+        const amt = Number(document.getElementById("pay_" + i.id).value);
+        if (!(amt > 0)) return toast("Enter the payment amount.", true);
+        const bal = Math.round((i.total - i.paid) * 100) / 100;
+        if (amt > bal + 0.001) return toast(`Payment exceeds the outstanding balance (${money(bal)}).`, true);
+        i.paid = Math.round((i.paid + amt) * 100) / 100;
+        i.status = i.paid >= i.total ? "paid" : "partial";
+        log(`Payment of ${money(amt)} recorded on ${i.number}`, i.clientId); return commit("Payment recorded");
+      }
+    }
+  });
+
+  document.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const f = e.target, fd = new FormData(f);
+    if (f.id === "newClientForm") return createClient(fd);
+    if (f.id === "kpiForm") {
+      const c = findClient(f.dataset.id);
+      if (!canManageOb(c)) return toast("Only the client's Account Manager can add KPI targets.", true);
+      c.kpis.push({ id: uid("k"), metric: String(fd.get("metric")), baseline: String(fd.get("baseline")), target: String(fd.get("target")), unit: String(fd.get("unit")), confirmedBy: null });
+      log(`KPI target defined: ${fd.get("metric")}`, c.id); return commit("KPI target added");
+    }
+    if (f.id === "submitForm") { const t = S.tasks.find((x) => x.id === drawer.id); return submitTask(t, String(fd.get("note") || ""), String(fd.get("link") || "")); }
+    if (f.id === "decideForm") return decide(f.dataset.a, e.submitter ? e.submitter.value : "approved", String(fd.get("note") || ""), String(fd.get("who") || ""), String(fd.get("via") || ""));
+    if (f.id === "newTaskForm") {
+      const p = S.projects.find((x) => x.id === drawer.projectId);
+      S.seq.task++;
+      const t = { id: uid("t"), num: S.seq.task, projectId: p.id, clientId: p.clientId, title: String(fd.get("title")), assignee: String(fd.get("assignee")), reviewer: p.pm, status: "ready", requiresReview: !!fd.get("review"), requiresClient: !!fd.get("client"), due: String(fd.get("due") || ""), versions: [] };
+      S.tasks.push(t); log(`Task "${t.title}" created and assigned to ${person(t.assignee).name}`, t.clientId);
+      drawer = null; return commit("Task created");
+    }
+    if (f.id === "svcForm") {
+      const cid = String(fd.get("client"));
+      if (S.services.some((s) => s.clientId === cid)) return toast("This client already has an SEO retainer.", true);
+      S.services.push({ id: uid("s"), clientId: cid, name: "SEO", amount: Number(fd.get("amount")) || 0, status: "active", start: today() });
+      log("SEO retainer added", cid); return commit("Retainer added. Run the scheduler to generate this month's tasks.");
+    }
+    if (f.id === "invForm") {
+      const amt = Number(fd.get("amount")), tax = Number(fd.get("tax")) || 0;
+      if (!(amt > 0)) return toast("Enter an amount.", true);
+      S.seq.invoice++;
+      const total = Math.round(amt * (1 + tax / 100) * 100) / 100;
+      const i = { id: uid("i"), number: `INV-${new Date().getFullYear()}-${pad(S.seq.invoice)}`, clientId: String(fd.get("client")), desc: String(fd.get("desc")), total, paid: 0, status: "draft", due: addDays(today(), 14) };
+      S.invoices.push(i); log(`Invoice ${i.number} drafted (${money(total)})`, i.clientId); return commit("Draft invoice saved");
+    }
+  });
+
+  function setPersona(id) {
+    me = person(id);
+    try { localStorage.setItem("dd.persona", id); } catch {}
+    drawer = null;
+    render();
+    toast(`Now viewing as ${me.name} (${ROLE_LABEL[me.role]})`);
+  }
+  document.getElementById("personaSel").addEventListener("change", (e) => setPersona(e.target.value));
+  document.getElementById("menuBtn").addEventListener("click", () => { navOpen = !navOpen; renderRail(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && drawer) { drawer = null; renderOverlay(); } });
+
+  connect();
+})();
+</script>

@@ -1,0 +1,39 @@
+# Production profile: nginx edge serves the built SPA and proxies /api.
+# Usage: docker compose -f compose.yaml -f compose.prod.yaml up -d --build --wait
+# Requires APP_ENV=production with real secrets in .env (see docs/deployment.md).
+services:
+  backend:
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # The Vite dev server is not part of the production stack.
+  frontend:
+    profiles: ["dev-only"]
+
+  edge:
+    build:
+      context: ./frontend
+      target: runtime
+      args:
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY:?set VITE_FIREBASE_API_KEY in .env}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN:-}
+        VITE_FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID:-}
+        # The emulator only exists in dev; production always talks to Google.
+        VITE_FIREBASE_USE_EMULATOR: "false"
+    image: delphin-edge:local
+    ports:
+      - "${EDGE_PORT:-8080}:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz-edge > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped

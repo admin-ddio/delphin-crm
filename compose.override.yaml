@@ -1,0 +1,51 @@
+# Development overrides (auto-loaded by `docker compose`): hot reload, bind mounts, ports.
+services:
+  db:
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+
+  migrate:
+    build:
+      context: ./backend
+      target: dev
+    image: delphin-backend:dev
+
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    image: delphin-backend:dev
+    command: ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "app"]
+    environment:
+      # Bind mounts on Docker Desktop (Windows/macOS) do not emit inotify events.
+      WATCHFILES_FORCE_POLLING: "true"
+    depends_on:
+      firebase:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/migrations:/app/migrations
+      - ./backend/scripts:/app/scripts
+      - ./backend/tests:/app/tests
+      - ./backend/pyproject.toml:/app/pyproject.toml:ro
+      # Token-drift and parity tooling may read the pilot; never write to it.
+      - ./reference/pilot:/reference/pilot:ro
+
+  frontend:
+    environment:
+      VITE_USE_POLLING: "true"
+      PILOT_DIR: /reference/pilot
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - ./reference/pilot:/reference/pilot:ro
+
+  # Firebase Auth Emulator (dev/test only). Reached by the backend directly and by the
+  # browser through the Vite proxy, so no host port is needed.
+  firebase:
+    build:
+      context: ./infra/firebase
+    image: delphin-firebase-emulator:local
+    restart: unless-stopped

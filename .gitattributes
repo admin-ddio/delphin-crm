@@ -1,0 +1,13 @@
+# Normalise text files to LF in the repository and working tree.
+* text=auto eol=lf
+
+# Byte-for-byte files: never touch line endings.
+# globals.css must stay identical to the pilot (token-drift test).
+frontend/src/styles/globals.css -text
+reference/** -text
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
