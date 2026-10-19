@@ -8,3 +8,4 @@ export * from '@/components/ui/EmptyState';
 export * from '@/components/ui/Link';
 export * from '@/components/ui/PageHeader';
 export * from '@/components/ui/Toast';
+export * from '@/components/ui/Avatar';

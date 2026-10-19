@@ -72,7 +72,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <p>{item.title}</p>
               {item.description ? <p className="mt-0.5 opacity-80">{item.description}</p> : null}
             </div>
-            <button type="button" onClick={() => dismiss(item.id)} className="opacity-70 hover:opacity-100">
+            <button
+              type="button"
+              onClick={() => dismiss(item.id)}
+              className="opacity-70 hover:opacity-100"
+            >
               <X aria-hidden className="size-4" />
               <span className="sr-only">Dismiss</span>
             </button>

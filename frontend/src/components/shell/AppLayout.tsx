@@ -39,7 +39,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="min-h-full shell:grid shell:grid-cols-[228px_minmax(0,1fr)]">
+    <div className="min-h-full shell:grid shell:grid-cols-[248px_minmax(0,1fr)]">
       <DocumentTitle />
       <a
         href="#main"
@@ -52,7 +52,7 @@ export function AppLayout() {
         <button
           type="button"
           aria-label="Close menu"
-          className="fixed inset-0 z-30 bg-[rgb(8_20_26/.45)] shell:hidden"
+          className="fixed inset-0 z-30 bg-[rgb(14_18_64/.5)] shell:hidden"
           onClick={() => setMobileOpen(false)}
         />
       ) : null}
@@ -61,7 +61,7 @@ export function AppLayout() {
         <main
           id="main"
           tabIndex={-1}
-          className="w-full max-w-[1320px] px-4 pt-[22px] pb-[60px] focus:outline-none"
+          className="w-full max-w-[1440px] px-4 pt-2 pb-[60px] focus:outline-none shell:px-8"
         >
           <Suspense fallback={null}>
             <Outlet />

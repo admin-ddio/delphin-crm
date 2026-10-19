@@ -8,8 +8,10 @@ const SUFFIX = 'Delphin Agency Console';
 
 export function DocumentTitle() {
   const matches = useMatches();
-  const handle = [...matches].reverse().find((match) => (match.handle as RouteHandle | undefined)?.title)
-    ?.handle as RouteHandle | undefined;
+  const handle = [...matches]
+    .reverse()
+    .find((match) => (match.handle as RouteHandle | undefined)?.title)?.handle as
+    RouteHandle | undefined;
   const title = handle ? `${handle.title} · ${SUFFIX}` : SUFFIX;
 
   useEffect(() => {

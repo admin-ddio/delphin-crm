@@ -111,7 +111,8 @@ test.describe('sign-in journey', () => {
     await page.reload(); // the session survives a reload (cookie + /auth/me)
     await expect(page.getByRole('heading', { level: 1, name: 'Projects' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Sign out' }).click();
+    await page.getByTestId('current-user').click();
+    await page.getByRole('menuitem', { name: 'Sign out' }).click();
     await expect(page).toHaveURL(/\/login$/);
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/\/login$/);

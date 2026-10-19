@@ -2,14 +2,37 @@
  * Data display primitives seen in the clickable demo: Progress, Tabs, StepList,
  * KeyValue, Timeline. PROVISIONAL visuals; replace with verbatim pilot ports.
  */
-import { Check } from 'lucide-react';
+import { Check, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------- Progress
 
-export function Progress({ value, label }: { value: number; label?: string }) {
+export type ProgressTone = 'auto' | 'accent' | 'ok' | 'warn' | 'bad';
+
+const BAR: Record<Exclude<ProgressTone, 'auto'>, string> = {
+  accent: 'bg-accent',
+  ok: 'bg-ok',
+  warn: 'bg-warn',
+  bad: 'bg-bad',
+};
+
+/** auto: green when complete, otherwise purple (mockups). */
+function toneOf(pct: number, tone: ProgressTone) {
+  if (tone !== 'auto') return BAR[tone];
+  return pct === 100 ? BAR.ok : BAR.accent;
+}
+
+export function Progress({
+  value,
+  label,
+  tone = 'auto',
+}: {
+  value: number;
+  label?: string;
+  tone?: ProgressTone;
+}) {
   const pct = Math.max(0, Math.min(100, Math.round(value)));
   return (
     <div className="flex items-center gap-2">
@@ -19,10 +42,10 @@ export function Progress({ value, label }: { value: number; label?: string }) {
         aria-valuemax={100}
         aria-valuenow={pct}
         aria-label={label ?? 'Progress'}
-        className="h-1.5 min-w-[60px] flex-1 overflow-hidden rounded bg-sunk"
+        className="h-2 min-w-[60px] flex-1 overflow-hidden rounded-full bg-sunk"
       >
         <i
-          className={cn('block h-full', pct === 100 ? 'bg-ok' : 'bg-accent')}
+          className={cn('block h-full rounded-full', toneOf(pct, tone))}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -38,6 +61,7 @@ export function Progress({ value, label }: { value: number; label?: string }) {
 export interface TabItem<K extends string> {
   key: K;
   label: ReactNode;
+  icon?: LucideIcon;
 }
 
 export interface TabsProps<K extends string> {
@@ -49,7 +73,11 @@ export interface TabsProps<K extends string> {
 
 export function Tabs<K extends string>({ items, value, onChange, label }: TabsProps<K>) {
   return (
-    <div role="tablist" aria-label={label} className="mb-4 flex gap-0.5 overflow-x-auto border-b border-line">
+    <div
+      role="tablist"
+      aria-label={label}
+      className="mb-6 flex gap-1 overflow-x-auto border-b border-line"
+    >
       {items.map((item) => (
         <button
           key={item.key}
@@ -58,10 +86,13 @@ export function Tabs<K extends string>({ items, value, onChange, label }: TabsPr
           aria-selected={item.key === value}
           onClick={() => onChange(item.key)}
           className={cn(
-            '-mb-px cursor-pointer border-b-2 px-3 py-2 font-medium whitespace-nowrap',
-            item.key === value ? 'border-accent text-accent-strong' : 'border-transparent text-muted',
+            '-mb-px inline-flex cursor-pointer items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors',
+            item.key === value
+              ? 'border-accent text-accent'
+              : 'border-transparent text-muted hover:text-fg',
           )}
         >
+          {item.icon ? <item.icon aria-hidden className="size-4" /> : null}
           {item.label}
         </button>
       ))}
@@ -94,7 +125,11 @@ export function StepList({ steps }: { steps: readonly StepItem[] }) {
               step.state === 'todo' && 'border-line',
             )}
           >
-            {step.state === 'done' ? <Check className="size-3" /> : step.state === 'blocked' ? '!' : null}
+            {step.state === 'done' ? (
+              <Check className="size-3" />
+            ) : step.state === 'blocked' ? (
+              '!'
+            ) : null}
           </span>
           <span className={step.state === 'done' ? 'text-muted' : undefined}>
             {index + 1}. {step.label}

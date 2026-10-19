@@ -9,12 +9,12 @@ import { cn } from '@/lib/utils';
 export type BadgeTone = 'neutral' | 'accent' | 'ok' | 'warn' | 'bad' | 'info';
 
 const tones: Record<BadgeTone, string> = {
-  neutral: 'bg-sunk text-muted',
-  accent: 'bg-accent-soft text-accent-strong',
-  ok: 'bg-ok-soft text-ok',
-  warn: 'bg-warn-soft text-warn',
-  bad: 'bg-bad-soft text-bad',
-  info: 'bg-info-soft text-info',
+  neutral: 'border-line bg-sunk text-muted',
+  accent: 'border-accent/20 bg-accent-soft text-accent-strong',
+  ok: 'border-ok/25 bg-ok-soft text-ok',
+  warn: 'border-warn/25 bg-warn-soft text-warn',
+  bad: 'border-bad/25 bg-bad-soft text-bad',
+  info: 'border-info/20 bg-info-soft text-info',
 };
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
@@ -25,7 +25,7 @@ export function Badge({ tone = 'neutral', className, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-px text-[11.5px] font-medium whitespace-nowrap',
+        'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap',
         tones[tone],
         className,
       )}

@@ -1,7 +1,9 @@
 /**
- * PROVISIONAL (layout from the clickable demo's `.head`): optional breadcrumb,
- * h1, muted sub-line, actions on the right. Replace with the pilot's PageHeader.
+ * PROVISIONAL (layout from the product owner's mockups, 2026-10-19): optional
+ * "← Back to …" link, optional leading visual (e.g. an avatar), large h1, muted
+ * sub-line, actions on the right. Replace with the pilot's PageHeader.
  */
+import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { Link } from '@/components/ui/Link';
@@ -16,25 +18,35 @@ export interface PageHeaderProps {
   description?: ReactNode;
   actions?: ReactNode;
   crumb?: Crumb;
+  /** Shown to the left of the title (client logo, avatar). */
+  leading?: ReactNode;
 }
 
-export function PageHeader({ title, description, actions, crumb }: PageHeaderProps) {
+export function PageHeader({ title, description, actions, crumb, leading }: PageHeaderProps) {
   return (
-    <div className="mb-[18px] flex flex-wrap items-start justify-between gap-3">
-      <div>
-        {crumb ? (
-          <div className="mb-1 text-xs text-muted">
-            <Link to={crumb.to} className="text-accent hover:underline">
-              {crumb.label}
-            </Link>
+    <div className="mb-6">
+      {crumb ? (
+        <div className="mb-3 text-[13px] text-muted">
+          <Link to={crumb.to} className="inline-flex items-center gap-1.5 hover:text-accent">
+            <ArrowLeft aria-hidden className="size-3.5" />
+            Back to {crumb.label}
+          </Link>
+        </div>
+      ) : null}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-4">
+          {leading}
+          <div className="min-w-0">
+            <h1 className="text-[26px] leading-tight font-bold tracking-[-0.02em] text-balance">
+              {title}
+            </h1>
+            {description ? (
+              <div className="mt-1.5 max-w-[80ch] text-muted">{description}</div>
+            ) : null}
           </div>
-        ) : null}
-        <h1 className="text-[21px] leading-tight font-bold tracking-[-0.01em] text-balance">
-          {title}
-        </h1>
-        {description ? <p className="mt-1 max-w-[70ch] text-muted">{description}</p> : null}
+        </div>
+        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
   );
 }
