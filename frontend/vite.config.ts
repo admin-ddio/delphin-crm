@@ -30,6 +30,9 @@ export default defineConfig({
     // "frontend" is the Compose hostname the Playwright container uses.
     allowedHosts: ['localhost', 'frontend'],
     watch: { usePolling: process.env.VITE_USE_POLLING === 'true' },
+    // Pre-compile the app at startup so the first visit to each page isn't slow
+    // (noticeable on Windows bind mounts, and in the throw-away e2e stack).
+    warmup: { clientFiles: ['./src/main.tsx', './src/features/**/*.tsx'] },
     // Same-origin in dev too: the browser only ever talks to :5173.
     proxy: { '/api': { target: apiTarget, changeOrigin: false }, ...firebaseProxy },
   },

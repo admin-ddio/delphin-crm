@@ -86,12 +86,9 @@ test: test-backend test-frontend ## All unit/integration tests
 E2E_EMAIL ?= e2e@example.com
 E2E_PASSWORD ?= e2e-password-not-secret
 
-e2e: ## Playwright smoke + visual parity against the running dev stack
-	$(COMPOSE) up -d --wait
-	$(BE) python scripts/seed_config.py
-	$(BE) python scripts/dev_create_user.py $(E2E_EMAIL) "E2E Admin" super_admin '$(E2E_PASSWORD)'
-	$(BE) python scripts/dev_create_user.py e2e-flows@example.com "E2E Flows" employee 'flows-password-original' --unverified
-	E2E_EMAIL=$(E2E_EMAIL) E2E_PASSWORD='$(E2E_PASSWORD)' $(COMPOSE) --profile e2e run --rm e2e
+e2e: ## Playwright on an isolated throw-away stack (never touches your dev data)
+	E2E_RUNNER=$(or $(E2E_RUNNER),container) E2E_EMAIL=$(E2E_EMAIL) E2E_PASSWORD='$(E2E_PASSWORD)' \
+	  bash infra/e2e/run.sh
 
 dev-user: ## Local sign-in: make dev-user email=you@example.com name="You" role=super_admin password=…
 	@test -n "$(email)" -a -n "$(password)" || { echo 'usage: make dev-user email=… password=… [name=… role=…]'; exit 1; }

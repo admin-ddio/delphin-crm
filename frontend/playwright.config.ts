@@ -13,6 +13,8 @@ export default defineConfig({
   // The suite runs against the Vite dev server, which compiles pages on first request;
   // with several browsers in parallel, 5 s (the default) is too tight.
   expect: { timeout: 10_000 },
+  // Whole journeys (sign-up → verify → approve → sign in) take 30–40 s on a busy dev server.
+  timeout: 60_000,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',
