@@ -14,7 +14,7 @@ from app.authz.actor import Actor
 from app.authz.permissions import CLIENTS_VIEW_ALL, SUPER_ADMIN
 from app.authz.scopes import apply_scope
 from app.core.pagination import PageParams
-from app.modules.clients.models import Client
+from app.modules.clients.models import Client, ClientTeamMember
 from app.platform.activity.models import ActivityEvent
 from app.platform.identity.models import Role, User, UserRole
 
@@ -32,15 +32,18 @@ class ClientScope:
     """Who sees which clients.
 
     Demo rule: Super Admin, Account Managers, Project Managers and Finance see every
-    client (`clients.view_all`); everyone else only clients they work on.
-    TODO(pilot-port): "work on" = client team / assigned tasks, once those exist;
-    until then a client's own Account Manager is the only other way in.
+    client (`clients.view_all`); everyone else only clients they work on: as the
+    client's Account Manager or on its internal team (onboarding step 10).
+    TODO(pilot-port): also clients where the actor has assigned tasks, once tasks exist.
     """
 
     def clause(self, actor: Actor) -> ColumnElement[bool]:
         if actor.can(CLIENTS_VIEW_ALL):
             return true()
-        return Client.account_manager_id == actor.user_id
+        on_team = select(ClientTeamMember.client_id).where(
+            ClientTeamMember.user_id == actor.user_id
+        )
+        return or_(Client.account_manager_id == actor.user_id, Client.id.in_(on_team))
 
 
 class ClientRepository:

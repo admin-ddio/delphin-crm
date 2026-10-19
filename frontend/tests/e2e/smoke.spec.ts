@@ -316,3 +316,107 @@ test.describe('clients', () => {
     await expect(page.getByText("Billing isn't ported yet")).toBeVisible();
   });
 });
+
+test.describe('onboarding', () => {
+  test.use({ storageState: AUTH_FILE });
+
+  test('all 13 steps through the UI, including the public questionnaire', async ({
+    page,
+    browser,
+  }) => {
+    test.setTimeout(150_000);
+    const stamp = Date.now();
+    const name = `Onboarding Ltd ${stamp}`;
+
+    // A client with a complete profile.
+    await page.goto('/clients/new');
+    await page.getByLabel('Legal / business name *').fill(name);
+    await page.getByLabel('Website').fill(`onboarding-${stamp}.example`);
+    await page.getByLabel('Industry').fill('Retail');
+    await page.getByLabel('Primary contact').fill('Pat Buyer');
+    await page.getByLabel('Contact e-mail').fill('pat@example.com');
+    await page.getByLabel('Account Manager *').selectOption({ label: 'E2E Admin' });
+    await page.getByRole('button', { name: 'Create client' }).click();
+    await expect(page.getByText('Next required action: Contract signed')).toBeVisible();
+    await page.getByRole('link', { name: 'Open onboarding →' }).click();
+    const onboarding = page.getByTestId('onboarding');
+    await expect(onboarding.getByText('15%')).toBeVisible();
+
+    // 1. Contract.
+    await page.getByRole('button', { name: 'Record contract' }).click();
+    await page.getByRole('button', { name: 'Mark signed' }).click();
+    await expect(onboarding.getByText(/^Signed/)).toBeVisible();
+
+    // 4–5. Questionnaire: the client answers from the link, signed out.
+    await page.getByRole('button', { name: 'Send questionnaire link' }).click();
+    const link = await page.getByTestId('questionnaire-link').innerText();
+    const clientView = await browser.newContext({ storageState: SIGNED_OUT });
+    const client = await clientView.newPage();
+    await client.goto(new URL(link).pathname);
+    await expect(client.getByText(`Onboarding questionnaire for ${name}`)).toBeVisible();
+    for (const label of [
+      'Business goals',
+      'Products and services',
+      'Target markets',
+      'Target audiences',
+      'Competitors',
+      'Brand voice',
+    ]) {
+      await client.getByLabel(label).fill(`${label}: answer`);
+    }
+    await client.getByRole('button', { name: 'Send answers' }).click();
+    await expect(client.getByText('Your answers have been sent')).toBeVisible();
+    await client.goto(new URL(link).pathname);
+    await expect(client.getByText('invalid, already used or has expired')).toBeVisible();
+    await clientView.close();
+    await page.reload();
+    await expect(onboarding.getByText('Submitted', { exact: true })).toBeVisible();
+
+    // 6–7. Access: receive all, then verify each.
+    await page.getByRole('button', { name: 'Mark all received' }).click();
+    for (let i = 0; i < 5; i += 1) {
+      await page.getByRole('button', { name: 'Verify', exact: true }).first().click();
+      await expect(page.getByRole('button', { name: 'Verify', exact: true })).toHaveCount(4 - i);
+    }
+
+    // 8. KPI target + client confirmation.
+    await page.getByLabel('Metric').fill('Organic sessions');
+    await page.getByLabel('Baseline').fill('1200');
+    await page.getByLabel('Target').fill('3000');
+    await page.getByLabel('Unit').fill('sessions / month');
+    await page.getByRole('button', { name: 'Add KPI target' }).click();
+    await expect(onboarding.getByText('Awaiting client', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Record client confirmation' }).click();
+    await expect(onboarding.getByText('Confirmed by Pat Buyer')).toBeVisible();
+
+    // 9–10. Kickoffs and team.
+    const kickoffs = page.locator('section').filter({ hasText: '9–10 · Kickoffs & team' });
+    await kickoffs.getByRole('button', { name: 'Schedule' }).first().click();
+    await kickoffs.getByRole('button', { name: 'Save' }).click();
+    await kickoffs.getByRole('button', { name: 'Complete with notes' }).click();
+    await kickoffs.getByLabel('Notes').fill('Goals and timeline agreed');
+    await kickoffs.getByRole('button', { name: 'Save' }).click();
+    await expect(kickoffs.getByText('Notes: Goals and timeline agreed')).toBeVisible();
+    await kickoffs.getByLabel('Team member').selectOption({ label: 'E2E Flows' });
+    await kickoffs.getByRole('button', { name: 'Assign' }).click();
+    await expect(kickoffs.getByRole('button', { name: 'Remove E2E Flows' })).toBeVisible();
+    await kickoffs.getByRole('button', { name: 'Schedule' }).click();
+    await kickoffs.getByRole('button', { name: 'Save' }).click();
+    await kickoffs.getByRole('button', { name: 'Complete with responsibilities' }).click();
+    await kickoffs.getByLabel('Responsibilities').fill('E2E Flows owns the audit');
+    await kickoffs.getByRole('button', { name: 'Save' }).click();
+
+    // 11–12. Review and completion.
+    await page.getByRole('button', { name: 'Pass onboarding review' }).click();
+    await expect(page.getByRole('button', { name: 'Review passed ✓' })).toBeVisible();
+    await page.getByRole('button', { name: 'Complete onboarding' }).click();
+    await expect(page.getByText(/^Onboarding completed /)).toBeVisible();
+    await expect(onboarding.getByText('92%')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 }).getByText('Active')).toBeVisible();
+
+    // The board shows it as completed.
+    await page.goto('/onboarding');
+    const row = page.getByTestId('onboarding-board').getByRole('row').filter({ hasText: name });
+    await expect(row.getByText('Completed')).toBeVisible();
+  });
+});

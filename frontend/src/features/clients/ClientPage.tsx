@@ -20,6 +20,9 @@ import {
   type ClientDetail,
 } from '@/features/clients/api';
 import { ClientForm, toClientBody, type ClientFormValues } from '@/features/clients/ClientForm';
+import { useOnboarding } from '@/features/onboarding/api';
+import { OnboardingTab } from '@/features/onboarding/OnboardingTab';
+import { Link } from '@/components/ui/Link';
 import { STATUS_TONE } from '@/features/clients/ClientsListPage';
 import { ApiError } from '@/lib/api-client';
 import { formatDate, formatDateTime } from '@/lib/format';
@@ -44,6 +47,9 @@ const TABS: { slug: string; label: string }[] = [
 
 const crumb = { label: 'Clients', to: '/clients' };
 
+/** Tabs with real content; the rest show their "not yet ported" state. */
+const PORTED_TABS = new Set(['', 'edit', 'activity', 'onboarding']);
+
 function TabBar({ id }: { id: string }) {
   return (
     <nav aria-label="Client sections" className="mb-4 flex gap-0.5 overflow-x-auto border-b border-line">
@@ -66,13 +72,51 @@ function TabBar({ id }: { id: string }) {
   );
 }
 
+function NextAction({ client }: { client: ClientDetail }) {
+  const onboarding = useOnboarding(client.id);
+  const data = onboarding.data;
+  if (!data) return null;
+  if (data.completed_at) {
+    return (
+      <Alert tone="ok" title="Onboarding complete">
+        The client is Active. Creating the delivery project arrives with the Projects module.
+      </Alert>
+    );
+  }
+  const next = data.steps.find((s) => s.state !== 'done');
+  if (!next) return null;
+  return (
+    <Alert tone={data.status === 'blocked' ? 'bad' : 'info'} title={`Next required action: ${next.label}`}>
+      {next.detail || next.hint}{' '}
+      <Link className="link" to={`/clients/${client.id}/onboarding`}>
+        Open onboarding →
+      </Link>
+    </Alert>
+  );
+}
+
+function TeamPanel({ client }: { client: ClientDetail }) {
+  const onboarding = useOnboarding(client.id);
+  const team = onboarding.data?.team ?? [];
+  return (
+    <Panel title="Internal team">
+      {team.length ? (
+        <ul className="flex flex-col gap-1.5">
+          {team.map((member) => (
+            <li key={member.id}>{member.full_name}</li>
+          ))}
+        </ul>
+      ) : (
+        <EmptyState title="No team assigned" description="The team is assigned in onboarding step 10." />
+      )}
+    </Panel>
+  );
+}
+
 function Overview({ client }: { client: ClientDetail }) {
   return (
     <div className="flex flex-col gap-4">
-      <Alert tone="info" title="Onboarding isn't ported yet">
-        The 13-step onboarding workflow (contract → access → KPIs → kickoffs → review) will appear
-        on the Onboarding tab. Until then the client stays at “{client.status_label}”.
-      </Alert>
+      <NextAction client={client} />
       <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-4">
         <Panel title="Profile">
           <KeyValue
@@ -101,12 +145,7 @@ function Overview({ client }: { client: ClientDetail }) {
             ]}
           />
         </Panel>
-        <Panel title="Internal team">
-          <EmptyState
-            title="No team assigned"
-            description="Team assignment arrives with the onboarding kickoff step."
-          />
-        </Panel>
+        <TeamPanel client={client} />
       </div>
     </div>
   );
@@ -217,7 +256,8 @@ export function Component() {
       {tab === '' ? <Overview client={data} /> : null}
       {tab === 'edit' ? <EditTab client={data} /> : null}
       {tab === 'activity' ? <ActivityTab id={data.id} /> : null}
-      {tab !== '' && tab !== 'edit' && tab !== 'activity' ? (
+      {tab === 'onboarding' ? <OnboardingTab client={data} /> : null}
+      {!PORTED_TABS.has(tab) ? (
         <Panel flush>
           <EmptyState
             title={`${current?.label ?? 'This tab'} isn't ported yet. See PARITY.md`}

@@ -14,7 +14,10 @@ import { Link } from '@/components/ui/Link';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useClients, type ClientStatus } from '@/features/clients/api';
 import { STATUS_TONE } from '@/features/clients/ClientsListPage';
+import { useOnboardingBoard } from '@/features/onboarding/api';
+import { ONBOARDING_STATUS } from '@/features/onboarding/OnboardingTab';
 import { registrationsKey } from '@/features/team/TeamPage';
+import { Progress } from '@/components/ui/Data';
 import { api, unwrap } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { formatDate } from '@/lib/format';
@@ -100,6 +103,59 @@ function RecentClients({ canCreate }: { canCreate: boolean }) {
   );
 }
 
+function OnboardingPipeline() {
+  const board = useOnboardingBoard();
+  const open = board.data?.filter((row) => row.status !== 'completed') ?? [];
+  return (
+    <Panel
+      title="Onboarding pipeline"
+      flush
+      actions={
+        <Link className="link text-[13px]" to="/onboarding">
+          All onboarding →
+        </Link>
+      }
+    >
+      {board.isPending ? <EmptyState title="Loading…" /> : null}
+      {board.data && open.length === 0 ? <EmptyState title="No clients in onboarding" /> : null}
+      {open.length ? (
+        <div className="overflow-x-auto">
+          <table className="table" data-testid="onboarding-pipeline">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Progress</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {open.slice(0, 8).map((row) => {
+                const status = ONBOARDING_STATUS[row.status];
+                return (
+                  <tr key={row.client_id}>
+                    <td>
+                      <Link className="link" to={`/clients/${row.client_id}/onboarding`}>
+                        {row.client_name}
+                      </Link>
+                      {row.current_step ? <div className="code">{row.current_step}</div> : null}
+                    </td>
+                    <td className="w-[40%]">
+                      <Progress value={row.progress} label={`${row.client_name} onboarding progress`} />
+                    </td>
+                    <td>
+                      <Badge tone={status.tone}>{status.label}</Badge>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </Panel>
+  );
+}
+
 function PendingSignUpsCount() {
   const registrations = useQuery({
     queryKey: registrationsKey,
@@ -145,6 +201,7 @@ export function Component() {
       {canSeeClients ? <ClientTiles /> : null}
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-4">
+        {canSeeClients ? <OnboardingPipeline /> : null}
         {canSeeClients ? <RecentClients canCreate={canCreate} /> : null}
         <Panel title="Quick actions">
           <ul className="flex flex-col gap-2 text-[13px]">

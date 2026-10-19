@@ -7,9 +7,10 @@ reconcile with the Client model in schema.prisma (contacts, lifecycle enum, etc.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Final
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String, text
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, Timestamped, UUIDPrimaryKey
@@ -52,3 +53,23 @@ class Client(UUIDPrimaryKey, Timestamped, Base):
     created_by_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
+
+
+class ClientTeamMember(Base):
+    """People working on a client (assigned during onboarding, step 10).
+
+    Also widens visibility: team members see the client even without clients.view_all.
+    """
+
+    __tablename__ = "client_team_members"
+
+    client_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    added_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    added_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
