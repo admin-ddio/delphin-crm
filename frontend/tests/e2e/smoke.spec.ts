@@ -22,9 +22,11 @@ test.describe('signed-in pages', () => {
   for (const spec of ALL_ROUTE_SPECS.filter((s) => s.layout === 'app')) {
     test(`${spec.path} renders "${spec.title}"`, async ({ page }) => {
       await page.goto(samplePath(spec.path));
-      await expect(
-        page.getByRole('heading', { level: 1, name: spec.title, exact: true }),
-      ).toBeVisible();
+      // Ported pages title themselves from data (e.g. the client's name); placeholders use the spec.
+      const heading = spec.ported
+        ? page.getByRole('heading', { level: 1 })
+        : page.getByRole('heading', { level: 1, name: spec.title, exact: true });
+      await expect(heading).toBeVisible();
       await expect(page.getByTestId('app-sidebar')).toBeAttached();
       await expect(page.getByTestId('app-topbar')).toBeVisible();
     });
@@ -232,5 +234,74 @@ test.describe('self sign-up with admin approval', () => {
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: SLOW });
     await expect(page.getByTestId('current-user')).toContainText('Sam Signup');
     await expect(page.getByTestId('current-user')).toContainText('Account Manager');
+  });
+});
+
+test.describe('clients', () => {
+  test.use({ storageState: AUTH_FILE });
+
+  test('create, duplicate rules, search, view, edit and activity', async ({ page }) => {
+    const stamp = Date.now();
+    const name = `Playwright Widgets ${stamp}`;
+    const domain = `pw-widgets-${stamp}.example`;
+
+    // Create.
+    await page.goto('/clients');
+    await page.getByRole('link', { name: 'New client' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'New client' })).toBeVisible();
+    await page.getByLabel('Legal / business name *').fill(name);
+    await page.getByLabel('Website').fill(`https://www.${domain}/home`);
+    await page.getByLabel('Industry').fill('Manufacturing');
+    await page.getByLabel('Primary contact').fill('Pat Buyer');
+    await page.getByLabel('Contact e-mail').fill('pat@example.com');
+    await page.getByLabel('Account Manager *').selectOption({ label: 'E2E Admin' });
+    await page.getByRole('button', { name: 'Create client' }).click();
+
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(name);
+    await expect(page.getByText(/^CL-\d{4}$/)).toBeVisible();
+    await expect(page.getByText('Contract pending').first()).toBeVisible();
+    const clientUrl = page.url();
+
+    // Same domain: hard block, even when "different business" is ticked.
+    await page.goto('/clients/new');
+    await page.getByLabel('Legal / business name *').fill(`Unrelated ${stamp}`);
+    await page.getByLabel('Website').fill(domain);
+    await page.getByLabel('Account Manager *').selectOption({ label: 'E2E Admin' });
+    await page.getByLabel(/This is a different business/).check();
+    await page.getByRole('button', { name: 'Create client' }).click();
+    await expect(page.getByRole('alert')).toContainText(`domain ${domain} already exists`);
+
+    // Similar name: warning until confirmed.
+    await page.getByLabel('Legal / business name *').fill(`${name} Ltd.`);
+    await page.getByLabel('Website').fill('');
+    await page.getByLabel(/This is a different business/).uncheck();
+    await page.getByRole('button', { name: 'Create client' }).click();
+    await expect(page.getByText('Possible duplicate')).toBeVisible();
+    await page.getByLabel(/This is a different business/).check();
+    await page.getByRole('button', { name: 'Create client' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(`${name} Ltd.`);
+
+    // Search the list.
+    await page.goto('/clients');
+    await page.getByLabel('Search').fill(domain);
+    const table = page.getByTestId('clients-table');
+    await expect(table.getByRole('link', { name, exact: true })).toBeVisible();
+    await expect(table.getByRole('row')).toHaveCount(2); // header + 1 match
+
+    // Edit, then see it in the activity log.
+    await page.goto(clientUrl);
+    await page.getByRole('link', { name: 'Edit client' }).click();
+    await page.getByLabel('Industry').fill('Retail');
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByText('Client updated.')).toBeVisible();
+    await expect(page.getByText('Retail')).toBeVisible();
+
+    await page.getByRole('link', { name: 'Activity', exact: true }).click();
+    await expect(page.getByText('Client details updated: industry')).toBeVisible();
+    await expect(page.getByText(`Client ${name} created`)).toBeVisible();
+
+    // Tabs that aren't ported yet say so inside the client layout.
+    await page.getByRole('link', { name: 'Billing', exact: true }).click();
+    await expect(page.getByText("Billing isn't ported yet")).toBeVisible();
   });
 });

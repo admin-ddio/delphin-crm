@@ -38,7 +38,7 @@ def combine(*clauses: ColumnElement[bool]) -> ColumnElement[bool]:
     return and_(*clauses)
 
 
-def apply_scope[S: Select[Any]](
+def apply_scope[S: Select[*tuple[Any, ...]]](
     stmt: S, actor: Actor, scope: Scope, *filters: ColumnElement[bool]
 ) -> S:
     """Restrict `stmt` to the actor's scope, then narrow it by `filters`."""

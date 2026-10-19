@@ -1,6 +1,6 @@
 # Clients: parity checklist
 
-> **Status: not started.** The pilot was not present in `reference/pilot/` when this slot
+> **Status: core built (2026-10-18) from the clickable demo, pending pilot confirmation.** The pilot was not present in `reference/pilot/` when this slot
 > was scaffolded. Every `TODO(pilot-port)` below must be filled **from the pilot source**,
 > never from memory. See [docs/pilot-parity.md](../../../../docs/pilot-parity.md).
 
@@ -15,11 +15,18 @@
 
 | Pilot Server Action | Method | Path | Permission | Status |
 |---|---|---|---|---|
-| TODO(pilot-port): one row per export in `src/app/actions/*` for this domain | | `/api/v1/clients…` | | not-started |
+| list (search, status filter, sort, pages) | GET | `/api/v1/clients` | signed in (scoped) | built |
+| create | POST | `/api/v1/clients` | `clients.create` | built |
+| view | GET | `/api/v1/clients/{id}` | signed in (scoped; 404 outside scope) | built |
+| edit | PATCH | `/api/v1/clients/{id}` | own Account Manager or Super Admin | built |
+| activity | GET | `/api/v1/clients/{id}/activity` | signed in (scoped) | built |
+| Account Manager options | GET | `/api/v1/clients/account-managers` | `clients.create` or `clients.update` | built |
+| contacts, team, delete/archive | | | | not-started |
+| TODO(pilot-port): compare with `src/app/actions/*` client exports | | | | |
 
 ## Business rules
 
-- [ ] Duplicate client detection by normalised domain and name
+- [x] Duplicate client detection: same normalised domain = hard block (DB-enforced, race-safe); similar normalised name = warning overridable with "This is a different business" (demo rules, `rules.py`)
 - [ ] Financial fields are stripped from responses without the finance permission (shared with finance)
 
 Quote each rule from `reference/pilot/nextjs-app/docs/*.md` with a file reference when porting.
@@ -35,3 +42,13 @@ Quote each rule from `reference/pilot/nextjs-app/docs/*.md` with a file referenc
 ## Record-level scope
 
 - TODO(pilot-port): scope rules from `src/server/authz/*` → a `Scope` implementation used by every query
+
+## Built from the clickable demo (2026-10-18)
+
+- [x] Codes `CL-0001…` from the transactional counter
+- [x] Lifecycle status `contract_pending → onboarding → active` (moved by onboarding when ported)
+- [x] Scope: `clients.view_all` (AM, PM, Finance, Super Admin) sees all; others only clients they
+      manage. TODO(pilot-port): add "clients they work on" (team / assigned tasks)
+- [x] Only the client's own Account Manager (or Super Admin) edits; hidden clients answer 404
+- [x] Every create/edit audited with field changes and logged to the client activity timeline
+- [ ] Contacts tab, internal team, onboarding progress column: with the onboarding/contacts ports

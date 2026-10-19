@@ -8,10 +8,10 @@ import type { RouteSpec } from '@/app/route-spec';
  * users and password resets both arrive as Firebase `resetPassword` links.
  */
 export const authRouteSpecs: readonly RouteSpec[] = [
-  { path: '/login', title: 'Sign in', module: 'auth', layout: 'public', screenshots: ['00-login.png'] },
+  { path: '/login', title: 'Sign in', module: 'auth', layout: 'public', screenshots: ['00-login.png'], ported: true },
   // Not a pilot route: self sign-up added on request (pending admin approval).
-  { path: '/signup', title: 'Create account', module: 'auth', layout: 'public' },
-  { path: '/forgot-password', title: 'Forgot password', module: 'auth', layout: 'public' },
-  { path: '/auth/action', title: 'Account link', module: 'auth', layout: 'public' },
-  { path: '/account', title: 'My account', module: 'auth', layout: 'app' },
+  { path: '/signup', title: 'Create account', module: 'auth', layout: 'public', ported: true },
+  { path: '/forgot-password', title: 'Forgot password', module: 'auth', layout: 'public', ported: true },
+  { path: '/auth/action', title: 'Account link', module: 'auth', layout: 'public', ported: true },
+  { path: '/account', title: 'My account', module: 'auth', layout: 'app', ported: true },
 ];

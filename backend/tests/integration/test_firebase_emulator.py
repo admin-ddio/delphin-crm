@@ -53,3 +53,13 @@ async def test_invitation_user_and_setup_link() -> None:
     link = await provider.password_setup_link(email, "http://localhost:5173/login")
     assert "oobCode=" in link
     assert "mode=resetPassword" in link
+
+
+async def test_email_verified_and_delete() -> None:
+    provider = FirebaseIdentityProvider(PROJECT)
+    email = f"del-{uuid.uuid4().hex[:8]}@example.com"
+    uid = await provider.ensure_user(email, "Delete Me")
+    assert await provider.email_verified(uid) is False
+    await provider.delete_user(uid)
+    assert await provider.email_verified(uid) is None
+    await provider.delete_user(uid)  # already gone: no error

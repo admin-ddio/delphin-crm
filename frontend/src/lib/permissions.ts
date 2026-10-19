@@ -28,6 +28,8 @@ export function satisfies(granted: readonly Permission[], rule: PermissionRule):
 /** Interim catalogue (demo capabilities, renamed to `domain.action`). */
 export const P = {
   clientsCreate: 'clients.create',
+  clientsViewAll: 'clients.view_all',
+  clientsUpdate: 'clients.update',
   onboardingManage: 'onboarding.manage',
   accessVerify: 'onboarding.access_verify',
   kpiConfirm: 'onboarding.kpi_confirm',
@@ -72,6 +74,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, readonly Permission[]> = 
   admin: [],
   account_manager: [
     P.clientsCreate,
+    P.clientsViewAll,
+    P.clientsUpdate,
     P.onboardingManage,
     P.accessVerify,
     P.kpiConfirm,
@@ -81,8 +85,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, readonly Permission[]> = 
     P.retainersManage,
     P.financeView,
   ],
-  project_manager: [P.projectsCreate, P.tasksCreate, P.tasksReview, P.accessVerify, P.jobsRun],
+  project_manager: [P.clientsViewAll, P.projectsCreate, P.tasksCreate, P.tasksReview, P.accessVerify, P.jobsRun],
   team_lead: [P.tasksCreate, P.tasksReview, P.accessVerify],
   employee: [],
-  finance: [P.financeManage, P.financeView],
+  finance: [P.clientsViewAll, P.financeManage, P.financeView],
 };

@@ -40,6 +40,8 @@ export interface RouteSpec {
    * TODO(pilot-port): every title must reach 'pilot'.
    */
   titleSource?: 'demo' | 'pilot';
+  /** A real page renders here (its heading may be data, e.g. the client's name). */
+  ported?: boolean;
 }
 
 /** Sample values used to visit parameterised routes in tests. */

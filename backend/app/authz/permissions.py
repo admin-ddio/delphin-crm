@@ -24,6 +24,10 @@ WILDCARD: Final = "*"
 _PERMISSION_FORMAT = re.compile(r"[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+")
 
 CLIENTS_CREATE: Final = "clients.create"
+# Demo: AM, PM and Finance see every client; others only clients they work on.
+CLIENTS_VIEW_ALL: Final = "clients.view_all"
+# Demo: the client's own Account Manager (or Super Admin) manages it.
+CLIENTS_UPDATE: Final = "clients.update"
 ONBOARDING_MANAGE: Final = "onboarding.manage"
 ONBOARDING_ACCESS_VERIFY: Final = "onboarding.access_verify"
 ONBOARDING_KPI_CONFIRM: Final = "onboarding.kpi_confirm"
@@ -42,6 +46,8 @@ CATALOGUE_SOURCE: Literal["clickable-demo", "pilot"] = "clickable-demo"
 CATALOGUE: frozenset[str] = frozenset(
     {
         CLIENTS_CREATE,
+        CLIENTS_VIEW_ALL,
+        CLIENTS_UPDATE,
         ONBOARDING_MANAGE,
         ONBOARDING_ACCESS_VERIFY,
         ONBOARDING_KPI_CONFIRM,
@@ -79,6 +85,8 @@ DEFAULT_ROLES: Final[tuple[RoleDefinition, ...]] = (
         frozenset(
             {
                 CLIENTS_CREATE,
+                CLIENTS_VIEW_ALL,
+                CLIENTS_UPDATE,
                 ONBOARDING_MANAGE,
                 ONBOARDING_ACCESS_VERIFY,
                 ONBOARDING_KPI_CONFIRM,
@@ -95,7 +103,14 @@ DEFAULT_ROLES: Final[tuple[RoleDefinition, ...]] = (
         "Project Manager",
         "",
         frozenset(
-            {PROJECTS_CREATE, TASKS_CREATE, TASKS_REVIEW, ONBOARDING_ACCESS_VERIFY, JOBS_RUN}
+            {
+                CLIENTS_VIEW_ALL,
+                PROJECTS_CREATE,
+                TASKS_CREATE,
+                TASKS_REVIEW,
+                ONBOARDING_ACCESS_VERIFY,
+                JOBS_RUN,
+            }
         ),
     ),
     RoleDefinition(
@@ -105,7 +120,9 @@ DEFAULT_ROLES: Final[tuple[RoleDefinition, ...]] = (
         frozenset({TASKS_CREATE, TASKS_REVIEW, ONBOARDING_ACCESS_VERIFY}),
     ),
     RoleDefinition("employee", "Employee / Specialist"),
-    RoleDefinition("finance", "Finance", "", frozenset({FINANCE_MANAGE, FINANCE_VIEW})),
+    RoleDefinition(
+        "finance", "Finance", "", frozenset({CLIENTS_VIEW_ALL, FINANCE_MANAGE, FINANCE_VIEW})
+    ),
 )
 
 
