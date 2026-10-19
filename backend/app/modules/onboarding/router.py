@@ -12,6 +12,7 @@ import uuid
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Path, Response, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authz.dependencies import CurrentActor
@@ -20,17 +21,20 @@ from app.core.config import Settings, get_app_settings
 from app.core.errors import AUTH_ERROR_RESPONSES, ErrorEnvelope
 from app.db.session import get_session
 from app.modules.onboarding.schemas import (
+    AccessDetails,
+    AccessItemIn,
     AccessUpdate,
     AnswersIn,
     BoardRow,
-    ContractAction,
-    KickoffAction,
     KpiConfirmation,
     KpiIn,
+    KpiNotesIn,
+    KpiUpdate,
     OnboardingDetail,
     PublicQuestionnaire,
     QuestionnaireLinkOut,
     TeamMemberIn,
+    TeamMemberUpdate,
     UserRef,
 )
 from app.modules.onboarding.service import OnboardingService
@@ -54,6 +58,10 @@ PUBLIC_ERRORS: dict[int | str, dict[str, Any]] = {
 }
 
 ClientId = Annotated[uuid.UUID, Path()]
+
+
+class BulkAccess(BaseModel):
+    status: Literal["requested", "received"]
 
 
 def get_onboarding_service(
@@ -83,17 +91,7 @@ async def get_onboarding(
     return await service.detail(actor, client_id)
 
 
-# ---------------------------------------------------------------- step 1
-
-
-@router.post("/clients/{client_id}/contract", response_model=OnboardingDetail, responses=ERRORS)
-async def contract(
-    client_id: ClientId, body: ContractAction, actor: CurrentActor, service: Service
-) -> OnboardingDetail:
-    return await service.contract(actor, client_id, body.action)
-
-
-# ---------------------------------------------------------------- steps 4–5
+# ---------------------------------------------------------------- questionnaire
 
 
 @router.post(
@@ -104,48 +102,102 @@ async def contract(
 async def send_questionnaire(
     client_id: ClientId, actor: CurrentActor, service: Service
 ) -> QuestionnaireLinkOut:
-    """Create a single-use link (30 days) for the client; replaces any earlier link."""
+    """Create a single-use link (30 days); any earlier link stops working."""
     return await service.send_questionnaire(actor, client_id)
 
 
+@router.put("/clients/{client_id}/questionnaire", response_model=OnboardingDetail, responses=ERRORS)
+async def save_questionnaire_draft(
+    client_id: ClientId, body: AnswersIn, actor: CurrentActor, service: Service
+) -> OnboardingDetail:
+    """Save the answers as a draft (partial answers allowed)."""
+    return await service.save_answers(actor, client_id, body.answers, submit=False)
+
+
 @router.post(
-    "/clients/{client_id}/questionnaire/answers",
+    "/clients/{client_id}/questionnaire/submit",
     response_model=OnboardingDetail,
     responses=ERRORS,
 )
-async def record_answers(
+async def submit_questionnaire(
     client_id: ClientId, body: AnswersIn, actor: CurrentActor, service: Service
 ) -> OnboardingDetail:
-    """Record the client's answers on their behalf (e.g. collected on a call)."""
-    return await service.record_answers(actor, client_id, body.answers)
+    """Record the client's answers (every required answer is needed)."""
+    return await service.save_answers(actor, client_id, body.answers, submit=True)
 
 
-# ---------------------------------------------------------------- steps 6–7
+@router.get("/questionnaire/{token}", response_model=PublicQuestionnaire, responses=PUBLIC_ERRORS)
+async def public_questionnaire(token: str, service: Service) -> PublicQuestionnaire:
+    """Public: the client opens the link (no sign-in)."""
+    return await service.public_questionnaire(token)
+
+
+@router.put("/questionnaire/{token}", response_model=PublicQuestionnaire, responses=PUBLIC_ERRORS)
+async def save_public_draft(token: str, body: AnswersIn, service: Service) -> PublicQuestionnaire:
+    """Public: save a draft and come back later with the same link."""
+    return await service.save_public_draft(token, body.answers)
+
+
+@router.post(
+    "/questionnaire/{token}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    responses=PUBLIC_ERRORS,
+)
+async def submit_public_questionnaire(token: str, body: AnswersIn, service: Service) -> None:
+    """Public: submit the answers; the link is used up."""
+    await service.submit_public_questionnaire(token, body.answers)
+
+
+# ---------------------------------------------------------------- access
 
 
 @router.patch(
     "/clients/{client_id}/access/{key}", response_model=OnboardingDetail, responses=ERRORS
 )
 async def update_access(
-    client_id: ClientId,
-    key: Annotated[str, Path(max_length=20)],
-    body: AccessUpdate,
-    actor: CurrentActor,
-    service: Service,
+    client_id: ClientId, key: str, body: AccessUpdate, actor: CurrentActor, service: Service
 ) -> OnboardingDetail:
     return await service.update_access(actor, client_id, key, body.status)
 
 
-@router.post(
-    "/clients/{client_id}/access/receive-all", response_model=OnboardingDetail, responses=ERRORS
-)
-async def receive_all_access(
-    client_id: ClientId, actor: CurrentActor, service: Service
+@router.post("/clients/{client_id}/access/bulk", response_model=OnboardingDetail, responses=ERRORS)
+async def bulk_access(
+    client_id: ClientId, body: BulkAccess, actor: CurrentActor, service: Service
 ) -> OnboardingDetail:
-    return await service.receive_all(actor, client_id)
+    """Request every pending item, or mark every pending/requested item received."""
+    return await service.bulk_access(actor, client_id, body.status)
 
 
-# ---------------------------------------------------------------- step 8
+@router.post("/clients/{client_id}/access", response_model=OnboardingDetail, responses=ERRORS)
+async def add_access_item(
+    client_id: ClientId, body: AccessItemIn, actor: CurrentActor, service: Service
+) -> OnboardingDetail:
+    return await service.add_access_item(actor, client_id, body)
+
+
+@router.patch(
+    "/clients/{client_id}/access/{key}/details",
+    response_model=OnboardingDetail,
+    responses=ERRORS,
+)
+async def update_access_details(
+    client_id: ClientId, key: str, body: AccessDetails, actor: CurrentActor, service: Service
+) -> OnboardingDetail:
+    return await service.update_access_details(actor, client_id, key, body)
+
+
+@router.delete(
+    "/clients/{client_id}/access/{key}", response_model=OnboardingDetail, responses=ERRORS
+)
+async def delete_access_item(
+    client_id: ClientId, key: str, actor: CurrentActor, service: Service
+) -> OnboardingDetail:
+    """Custom items only."""
+    return await service.delete_access_item(actor, client_id, key)
+
+
+# ---------------------------------------------------------------- KPIs
 
 
 @router.post("/clients/{client_id}/kpis", response_model=OnboardingDetail, responses=ERRORS)
@@ -153,6 +205,20 @@ async def add_kpi(
     client_id: ClientId, body: KpiIn, actor: CurrentActor, service: Service
 ) -> OnboardingDetail:
     return await service.add_kpi(actor, client_id, body)
+
+
+@router.patch(
+    "/clients/{client_id}/kpis/{kpi_id}", response_model=OnboardingDetail, responses=ERRORS
+)
+async def update_kpi(
+    client_id: ClientId,
+    kpi_id: uuid.UUID,
+    body: KpiUpdate,
+    actor: CurrentActor,
+    service: Service,
+) -> OnboardingDetail:
+    """Changing a confirmed target clears its confirmation; current values any time."""
+    return await service.update_kpi(actor, client_id, kpi_id, body)
 
 
 @router.delete(
@@ -168,29 +234,21 @@ async def delete_kpi(
 async def confirm_kpis(
     client_id: ClientId, body: KpiConfirmation, actor: CurrentActor, service: Service
 ) -> OnboardingDetail:
-    """Record that the client confirmed every pending KPI target (who, and how)."""
     return await service.confirm_kpis(actor, client_id, body)
 
 
-# ---------------------------------------------------------------- steps 9–10
-
-
-@router.post(
-    "/clients/{client_id}/kickoffs/{kind}", response_model=OnboardingDetail, responses=ERRORS
-)
-async def kickoff(
-    client_id: ClientId,
-    kind: Literal["client", "internal"],
-    body: KickoffAction,
-    actor: CurrentActor,
-    service: Service,
+@router.put("/clients/{client_id}/kpi-notes", response_model=OnboardingDetail, responses=ERRORS)
+async def kpi_notes(
+    client_id: ClientId, body: KpiNotesIn, actor: CurrentActor, service: Service
 ) -> OnboardingDetail:
-    return await service.kickoff(actor, client_id, kind, body)
+    return await service.kpi_notes(actor, client_id, body)
+
+
+# ---------------------------------------------------------------- team
 
 
 @router.get("/clients/{client_id}/team/options", response_model=list[UserRef], responses=ERRORS)
 async def team_options(client_id: ClientId, actor: CurrentActor, service: Service) -> list[UserRef]:
-    """People who can be added to this client's team."""
     return await service.team_options(actor, client_id)
 
 
@@ -198,7 +256,20 @@ async def team_options(client_id: ClientId, actor: CurrentActor, service: Servic
 async def add_team_member(
     client_id: ClientId, body: TeamMemberIn, actor: CurrentActor, service: Service
 ) -> OnboardingDetail:
-    return await service.add_team_member(actor, client_id, body.user_id)
+    return await service.add_team_member(actor, client_id, body)
+
+
+@router.patch(
+    "/clients/{client_id}/team/{user_id}", response_model=OnboardingDetail, responses=ERRORS
+)
+async def update_team_member(
+    client_id: ClientId,
+    user_id: uuid.UUID,
+    body: TeamMemberUpdate,
+    actor: CurrentActor,
+    service: Service,
+) -> OnboardingDetail:
+    return await service.update_team_member(actor, client_id, user_id, body)
 
 
 @router.delete(
@@ -210,45 +281,14 @@ async def remove_team_member(
     return await service.remove_team_member(actor, client_id, user_id)
 
 
-# ---------------------------------------------------------------- steps 11–12
+# ---------------------------------------------------------------- review & completion
 
 
 @router.post("/clients/{client_id}/review", response_model=OnboardingDetail, responses=ERRORS)
-async def pass_review(
-    client_id: ClientId, actor: CurrentActor, service: Service
-) -> OnboardingDetail:
-    """Passes only when steps 1–10 are done."""
+async def review(client_id: ClientId, actor: CurrentActor, service: Service) -> OnboardingDetail:
     return await service.review(actor, client_id)
 
 
 @router.post("/clients/{client_id}/complete", response_model=OnboardingDetail, responses=ERRORS)
-async def complete_onboarding(
-    client_id: ClientId, actor: CurrentActor, service: Service
-) -> OnboardingDetail:
-    """Re-checks access, KPI confirmation and steps 1–11; the client becomes Active."""
+async def complete(client_id: ClientId, actor: CurrentActor, service: Service) -> OnboardingDetail:
     return await service.complete(actor, client_id)
-
-
-# ---------------------------------------------------------------- public questionnaire
-
-
-@router.get("/questionnaire/{token}", response_model=PublicQuestionnaire, responses=PUBLIC_ERRORS)
-async def public_questionnaire(
-    token: Annotated[str, Path(min_length=16, max_length=200)], service: Service
-) -> PublicQuestionnaire:
-    """No sign-in: the single-use link token is the credential."""
-    return await service.public_questionnaire(token)
-
-
-@router.post(
-    "/questionnaire/{token}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    response_class=Response,
-    responses=PUBLIC_ERRORS,
-)
-async def submit_public_questionnaire(
-    token: Annotated[str, Path(min_length=16, max_length=200)],
-    body: AnswersIn,
-    service: Service,
-) -> None:
-    await service.submit_public_questionnaire(token, body.answers)

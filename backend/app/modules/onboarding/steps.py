@@ -1,28 +1,35 @@
-"""The 13 onboarding steps, computed from a snapshot. Pure: no database, no I/O.
+"""The 13 onboarding steps, the 6 dashboard stages and the next actions, computed from
+a snapshot. Pure: no database, no I/O.
 
-Direct port of the clickable demo's `steps(c)` (state per step, detail line,
-progress = done ÷ 13, blocked when any required access item is rejected).
+Workflow (product owner's spec, 2026-10-19): 1 contract signed (captured on Create
+Client) · 2 client created · 3 profile completed · 4 questionnaire sent · 5 submitted ·
+6 access collected · 7 access verified · 8 KPI targets confirmed · 9 client kickoff
+meeting · 10 internal team kickoff · 11 review · 12 completed · 13 project.
+Progress = steps done ÷ 13; blocked when a required access item is rejected.
 TODO(pilot-port): diff against services/onboarding.ts and docs/onboarding-workflow.md.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date, timedelta
 from typing import Final, Literal
 
 StepState = Literal["todo", "progress", "done", "blocked"]
+StageState = Literal["pending", "in_progress", "completed", "blocked"]
 OverallStatus = Literal["in_progress", "blocked", "completed"]
+Priority = Literal["high", "medium", "low"]
 
 STEP_DEFS: Final[tuple[tuple[str, str, str], ...]] = (
-    ("contract", "Contract signed", "Record the contract and mark it signed."),
+    ("contract", "Contract signed", "Enter the contract dates on the client profile."),
     ("created", "Client created", ""),
     (
         "profile",
         "Client profile completed",
-        "Fill in website, industry and a primary contact with e-mail.",
+        "Add the website, industry and the primary contact's e-mail and phone.",
     ),
     ("q_sent", "Onboarding questionnaire sent", "Send the questionnaire link to the client."),
-    ("q_done", "Questionnaire submitted", "Record the client's answers."),
+    ("q_done", "Questionnaire submitted", "The client submits it, or record their answers."),
     ("access_in", "Platform access collected", "Mark each platform as received."),
     ("access_ok", "Access verified", "An authorised team member verifies every item."),
     (
@@ -30,13 +37,13 @@ STEP_DEFS: Final[tuple[tuple[str, str, str], ...]] = (
         "KPI targets defined & confirmed",
         "Add KPI targets and record the client's confirmation.",
     ),
-    ("kickoff_client", "Client kickoff meeting", "Hold and complete the client kickoff."),
+    ("kickoff_client", "Client kickoff meeting", "Schedule the kickoff call and record its notes."),
     (
         "kickoff_internal",
         "Internal team kickoff",
-        "Assign the team and complete the internal kickoff.",
+        "Assign the team and complete an internal kickoff meeting.",
     ),
-    ("review", "Onboarding review", "Pass the review checklist."),
+    ("review", "Onboarding review", "Pass the review once steps 1–10 are done."),
     ("done", "Onboarding completed", "Complete onboarding."),
     ("project", "Project created / linked", "Create the delivery project."),
 )
@@ -44,21 +51,55 @@ STEP_KEYS: Final = tuple(key for key, _, _ in STEP_DEFS)
 #: Steps 1–10 must be done before the review can pass.
 PRE_REVIEW: Final = STEP_KEYS[:10]
 
-DEFAULT_ACCESS_ITEMS: Final = (
-    ("GSC", "Google Search Console"),
-    ("GA4", "Google Analytics 4"),
-    ("CMS", "Website CMS"),
-    ("AHREFS", "Ahrefs"),
-    ("GDRIVE", "Google Drive"),
+#: The dashboard's progress tracker (mockup): six stages over the 13 steps.
+STAGE_DEFS: Final[tuple[tuple[str, str, tuple[str, ...]], ...]] = (
+    ("client", "Client Created", ("contract", "created", "profile")),
+    ("questionnaire", "Questionnaire", ("q_sent", "q_done")),
+    ("access", "Access", ("access_in", "access_ok")),
+    ("kpis", "KPIs", ("kpi",)),
+    ("kickoff", "Kickoff", ("kickoff_client", "kickoff_internal")),
+    ("review", "Review", ("review", "done")),
 )
 
-QUESTIONS: Final = (
-    ("business_goals", "Business goals"),
-    ("products_services", "Products and services"),
-    ("target_markets", "Target markets"),
-    ("target_audiences", "Target audiences"),
-    ("competitors", "Competitors"),
-    ("brand_voice", "Brand voice"),
+#: Default target day (after the client is created) for each step: drives the
+#: "Next steps" due dates and priorities. TODO(confirm): agency SLA.
+TARGET_DAYS: Final[dict[str, int]] = {
+    "contract": 0,
+    "created": 0,
+    "profile": 1,
+    "q_sent": 2,
+    "q_done": 5,
+    "access_in": 5,
+    "access_ok": 7,
+    "kpi": 8,
+    "kickoff_client": 9,
+    "kickoff_internal": 10,
+    "review": 12,
+    "done": 14,
+    "project": 15,
+}
+ACTIONS: Final[dict[str, str]] = {
+    "contract": "Add contract details",
+    "created": "Create the client",
+    "profile": "Complete the client profile",
+    "q_sent": "Send the onboarding questionnaire",
+    "q_done": "Collect the questionnaire answers",
+    "access_in": "Collect platform access",
+    "access_ok": "Verify platform access",
+    "kpi": "Define and confirm KPI targets",
+    "kickoff_client": "Conduct the kickoff call",
+    "kickoff_internal": "Internal team kickoff",
+    "review": "Pass the onboarding review",
+    "done": "Complete onboarding",
+    "project": "Create the delivery project",
+}
+
+DEFAULT_ACCESS_ITEMS: Final = (
+    ("GSC", "Google Search Console", "Access to GSC for domain performance data"),
+    ("GA4", "Google Analytics 4", "GA4 access for traffic and conversion tracking"),
+    ("CMS", "CMS Access", "Admin/editor access to the website CMS"),
+    ("AHREFS", "Ahrefs Account", "Access to Ahrefs for SEO analysis"),
+    ("GDRIVE", "Google Drive Access", "Shared drive for documents and reports"),
 )
 
 
@@ -70,19 +111,21 @@ class AccessSnapshot:
 
 @dataclass(frozen=True, slots=True)
 class Snapshot:
+    contract_captured: bool = False
     website: str | None = None
     industry: str | None = None
     contact_name: str | None = None
     contact_email: str | None = None
-    contract: str = "none"
+    contact_phone: str | None = None
     questionnaire: str = "none"
     access: tuple[AccessSnapshot, ...] = field(
         default_factory=lambda: tuple(
-            AccessSnapshot(label, "pending") for _, label in DEFAULT_ACCESS_ITEMS
+            AccessSnapshot(label, "pending") for _, label, _ in DEFAULT_ACCESS_ITEMS
         )
     )
     kpis_total: int = 0
     kpis_unconfirmed: int = 0
+    #: From meetings: none | scheduled | done.
     kickoff_client: str = "none"
     kickoff_internal: str = "none"
     team_size: int = 0
@@ -102,6 +145,22 @@ class Step:
 
 
 @dataclass(frozen=True, slots=True)
+class Stage:
+    key: str
+    label: str
+    state: StageState
+
+
+@dataclass(frozen=True, slots=True)
+class NextAction:
+    step: str
+    title: str
+    detail: str
+    due: date
+    priority: Priority
+
+
+@dataclass(frozen=True, slots=True)
 class Evaluation:
     steps: tuple[Step, ...]
     progress: int
@@ -118,21 +177,67 @@ class Evaluation:
     def next_step(self) -> Step | None:
         return next((s for s in self.steps if s.state != "done"), None)
 
+    @property
+    def stages(self) -> tuple[Stage, ...]:
+        by_key = {s.key: s.state for s in self.steps}
+        out = []
+        for key, label, steps in STAGE_DEFS:
+            states = [by_key[k] for k in steps]
+            if all(s == "done" for s in states):
+                state: StageState = "completed"
+            elif "blocked" in states:
+                state = "blocked"
+            elif any(s in ("done", "progress") for s in states):
+                state = "in_progress"
+            else:
+                state = "pending"
+            out.append(Stage(key=key, label=label, state=state))
+        return tuple(out)
+
+    def next_actions(self, created: date, today: date, limit: int = 4) -> list[NextAction]:
+        actions = []
+        for step in self.steps:
+            if step.state == "done" or step.key == "created":
+                continue
+            due = created + timedelta(days=TARGET_DAYS[step.key])
+            days_left = (due - today).days
+            priority: Priority = (
+                "high"
+                if step.state == "blocked" or days_left <= 2
+                else "medium"
+                if days_left <= 5
+                else "low"
+            )
+            actions.append(
+                NextAction(
+                    step=step.key,
+                    title=ACTIONS[step.key],
+                    detail=step.detail or step.hint,
+                    due=due,
+                    priority=priority,
+                )
+            )
+            if len(actions) == limit:
+                break
+        return actions
+
 
 def _join(names: list[str]) -> str:
     return ", ".join(names)
 
 
-def evaluate(snap: Snapshot) -> Evaluation:  # noqa: PLR0912, PLR0915  # mirrors the demo step by step
+def _meeting_step(state: str, what: str) -> tuple[StepState, str]:
+    if state == "done":
+        return "done", ""
+    if state == "scheduled":
+        return "progress", f"{what} scheduled, notes not recorded"
+    return "todo", f"No {what.lower()} scheduled"
+
+
+def evaluate(snap: Snapshot) -> Evaluation:  # noqa: PLR0912, PLR0915  # one branch per step
     out: dict[str, tuple[StepState, str]] = {}
 
-    if snap.contract == "signed":
-        out["contract"] = ("done", "")
-    elif snap.contract == "draft":
-        out["contract"] = ("progress", "Recorded, not yet signed")
-    else:
-        out["contract"] = ("todo", "No contract recorded")
-
+    out["contract"] = ("done", "") if snap.contract_captured else ("todo", "No contract dates")
     out["created"] = ("done", "")
 
     missing = [
@@ -140,7 +245,10 @@ def evaluate(snap: Snapshot) -> Evaluation:  # noqa: PLR0912, PLR0915  # mirrors
         for name, ok in (
             ("website", bool(snap.website)),
             ("industry", bool(snap.industry)),
-            ("primary contact", bool(snap.contact_name and snap.contact_email)),
+            (
+                "primary contact",
+                bool(snap.contact_name and snap.contact_email and snap.contact_phone),
+            ),
         )
         if not ok
     ]
@@ -180,28 +288,18 @@ def evaluate(snap: Snapshot) -> Evaluation:  # noqa: PLR0912, PLR0915  # mirrors
     else:
         out["kpi"] = ("done", "")
 
-    if snap.kickoff_client == "done":
-        out["kickoff_client"] = ("done", "")
-    elif snap.kickoff_client == "scheduled":
-        out["kickoff_client"] = ("progress", "Scheduled, not completed")
-    else:
-        out["kickoff_client"] = ("todo", "Not scheduled")
+    out["kickoff_client"] = _meeting_step(snap.kickoff_client, "Kickoff call")
 
     team_ok = snap.team_size > 0
-    internal_problems = [
-        p
-        for p in (
-            "" if team_ok else "No team assigned",
-            "" if snap.kickoff_internal == "done" else "Internal kickoff not completed",
-        )
-        if p
-    ]
-    if snap.kickoff_internal == "done" and team_ok:
-        out["kickoff_internal"] = ("done", "")
-    elif team_ok or snap.kickoff_internal != "none":
-        out["kickoff_internal"] = ("progress", "; ".join(internal_problems))
+    internal_state, internal_detail = _meeting_step(snap.kickoff_internal, "Internal kickoff")
+    if internal_state == "done" and not team_ok:
+        out["kickoff_internal"] = ("progress", "No team assigned")
+    elif internal_state != "done" and team_ok:
+        out["kickoff_internal"] = ("progress", internal_detail)
+    elif internal_state == "todo":
+        out["kickoff_internal"] = ("todo", "No team assigned; no internal kickoff scheduled")
     else:
-        out["kickoff_internal"] = ("todo", "; ".join(internal_problems))
+        out["kickoff_internal"] = (internal_state, internal_detail)
 
     pre = all(out[key][0] == "done" for key in PRE_REVIEW)
     if snap.reviewed and pre:
@@ -225,7 +323,7 @@ def evaluate(snap: Snapshot) -> Evaluation:  # noqa: PLR0912, PLR0915  # mirrors
     else:
         out["project"] = ("todo", "Available after onboarding is completed")
 
-    if snap.completed:  # completion freezes steps 1–12 as done (demo)
+    if snap.completed:  # completion freezes steps 1–12 as done
         for key in STEP_KEYS[:12]:
             out[key] = ("done", "")
 

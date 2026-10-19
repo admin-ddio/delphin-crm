@@ -14,6 +14,8 @@ Rules (clickable demo; TODO(pilot-port): confirm against services/clients.ts):
 from __future__ import annotations
 
 import uuid
+from datetime import date
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy.exc import IntegrityError
@@ -21,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authz.actor import Actor
 from app.authz.permissions import CLIENTS_UPDATE
-from app.core.errors import Conflict, Forbidden, NotFound, ValidationFailed
+from app.core.errors import BusinessRuleViolation, Conflict, Forbidden, NotFound, ValidationFailed
 from app.core.pagination import Page, PageParams, parse_sort
 from app.modules.clients.models import Client
 from app.modules.clients.repository import SORTS, ClientRepository
@@ -33,20 +35,73 @@ from app.modules.clients.schemas import (
     ClientDetail,
     ClientListItem,
     ClientUpdate,
+    StatusCounts,
     UserRef,
 )
+from app.modules.notifications.service import NotificationService
 from app.platform.activity.service import ActivityRecorder
 from app.platform.audit.service import AuditWriter
 from app.platform.identity.models import User
+from app.platform.notifications.interfaces import NotificationRequest
 from app.platform.system.counters import format_code, next_value
 
 EDITABLE_FIELDS = (
     "name",
     "website",
     "industry",
+    "business_type",
+    "company_size",
+    "country",
+    "description",
     "contact_name",
+    "contact_designation",
     "contact_email",
+    "contact_phone",
+    "contact_alt_email",
+    "contact_alt_phone",
+    "contract_start",
+    "contract_end",
+    "contract_value",
+    "payment_terms",
+    "contract_notes",
     "account_manager_id",
+)
+#: Required on the create form; an edit may change but not clear them.
+REQUIRED_FIELDS = {
+    "name": "The company name",
+    "industry": "The industry",
+    "country": "The country",
+    "contact_name": "The contact name",
+    "contact_designation": "The contact's designation",
+    "contact_email": "The contact e-mail",
+    "contact_phone": "The contact phone",
+    "contract_start": "The contract start date",
+    "contract_end": "The contract end date",
+}
+EMAIL_FIELDS = ("contact_email", "contact_alt_email")
+DETAIL_FIELDS = (
+    "id",
+    "code",
+    "name",
+    "website",
+    "domain",
+    "industry",
+    "business_type",
+    "company_size",
+    "country",
+    "description",
+    "contact_name",
+    "contact_designation",
+    "contact_email",
+    "contact_phone",
+    "contact_alt_email",
+    "contact_alt_phone",
+    "contract_start",
+    "contract_end",
+    "contract_value",
+    "contract_currency",
+    "payment_terms",
+    "contract_notes",
 )
 
 
@@ -60,6 +115,7 @@ class ClientService:
         self._repo = ClientRepository(session)
         self._audit = AuditWriter(session)
         self._activity = ActivityRecorder(session)
+        self._notifier = NotificationService(session)
 
     # ------------------------------------------------------------ reads
 
@@ -75,24 +131,38 @@ class ClientService:
         rows, total = await self._repo.page(
             actor, params, search=search, status=status, sort=parse_sort(sort, SORTS)
         )
+        last = await self._repo.last_activity([client.id for client, _ in rows])
         items = [
             ClientListItem(
                 id=client.id,
                 code=client.code,
                 name=client.name,
+                website=client.website,
                 domain=client.domain,
+                industry=client.industry,
                 status=client.status,  # type: ignore[arg-type]  # DB check constraint
                 status_label=STATUS_LABELS[client.status],
                 account_manager=_ref(manager),
                 created_at=client.created_at,
+                last_activity_at=last.get(client.id),
             )
             for client, manager in rows
         ]
         return Page[ClientListItem].create(items, total, params)
 
+    async def status_counts(self, actor: Actor) -> StatusCounts:
+        counts = await self._repo.status_counts(actor)
+        return StatusCounts(
+            all=sum(counts.values()),
+            onboarding=counts.get("onboarding", 0),
+            active=counts.get("active", 0),
+            on_hold=counts.get("on_hold", 0),
+            completed=counts.get("completed", 0),
+        )
+
     async def get(self, actor: Actor, client_id: uuid.UUID) -> ClientDetail:
         client, manager = await self._visible(actor, client_id)
-        return self._detail(actor, client, manager)
+        return await self._detail(actor, client, manager)
 
     async def activity(self, actor: Actor, client_id: uuid.UUID) -> list[ClientActivity]:
         await self._visible(actor, client_id)
@@ -123,17 +193,20 @@ class ClientService:
         )
 
         number = await next_value(self._session, "client")
+        fields = data.model_dump(
+            include=set(EDITABLE_FIELDS) - {"account_manager_id"}, exclude_none=True
+        )
+        for name in EMAIL_FIELDS:
+            if name in fields:
+                fields[name] = str(fields[name])
         client = Client(
             code=format_code("CL", number),
-            name=data.name,
             normalized_name=normalized,
-            website=data.website,
             domain=domain,
-            industry=data.industry,
-            contact_name=data.contact_name,
-            contact_email=str(data.contact_email) if data.contact_email else None,
+            status="onboarding",  # the contract is signed before the client is created
             account_manager_id=manager.id,
             created_by_id=actor.user_id,
+            **fields,
         )
         try:
             await self._repo.add(client)
@@ -158,22 +231,42 @@ class ClientService:
             actor_user_id=actor.user_id,
             summary=f"Client {client.name} created",
         )
-        return self._detail(actor, client, manager)
+        if manager.id != actor.user_id:
+            await self._notifier.notify(
+                NotificationRequest(
+                    user_id=manager.id,
+                    kind="client.assigned",
+                    title=f"You're the Account Manager for {client.name}",
+                    body="Onboarding has started. Complete the profile and send the questionnaire.",
+                    link=f"/clients/{client.id}",
+                    entity_type="client",
+                    entity_id=str(client.id),
+                )
+            )
+        return await self._detail(actor, client, manager)
 
-    async def update(self, actor: Actor, client_id: uuid.UUID, data: ClientUpdate) -> ClientDetail:
+    async def update(  # noqa: PLR0912  # one guard per editable field group
+        self, actor: Actor, client_id: uuid.UUID, data: ClientUpdate
+    ) -> ClientDetail:
         client, manager = await self._visible(actor, client_id)
         if not self._can_edit(actor, client):
             raise Forbidden("Only the client's Account Manager can edit it.")
 
         incoming = data.model_dump(exclude_unset=True, exclude={"confirm_different_business"})
-        if incoming.get("name") is None and "name" in incoming:
-            raise ValidationFailed("The client name can't be empty.")
+        for name, label in REQUIRED_FIELDS.items():
+            if name in incoming and incoming[name] is None:
+                raise ValidationFailed(f"{label} can't be empty.")
         if "account_manager_id" in incoming:
             if incoming["account_manager_id"] is None:
                 raise ValidationFailed("A client must have an Account Manager.")
             manager = await self._account_manager(incoming["account_manager_id"])
-        if "contact_email" in incoming and incoming["contact_email"] is not None:
-            incoming["contact_email"] = str(incoming["contact_email"])
+        for name in EMAIL_FIELDS:
+            if incoming.get(name) is not None:
+                incoming[name] = str(incoming[name])
+        start = incoming.get("contract_start", client.contract_start)
+        end = incoming.get("contract_end", client.contract_end)
+        if start and end and end < start:
+            raise ValidationFailed("The contract end date must be on or after the start date.")
 
         changes: dict[str, Any] = {}
         for field, new in incoming.items():
@@ -181,7 +274,7 @@ class ClientService:
             if old != new:
                 changes[field] = [self._jsonable(old), self._jsonable(new)]
         if not changes:
-            return self._detail(actor, client, manager)
+            return await self._detail(actor, client, manager)
 
         if "name" in changes or "website" in changes:
             domain = domain_of(incoming.get("website", client.website))
@@ -220,7 +313,45 @@ class ClientService:
             summary="Client details updated: "
             + ", ".join(field.replace("_id", "").replace("_", " ") for field in changes),
         )
-        return self._detail(actor, client, manager)
+        return await self._detail(actor, client, manager)
+
+    async def change_status(self, actor: Actor, client_id: uuid.UUID, action: str) -> ClientDetail:
+        """On hold / Completed / reactivate (the AM's manual lifecycle states)."""
+        client, manager = await self._visible(actor, client_id)
+        if not self._can_edit(actor, client):
+            raise Forbidden("Only the client's Account Manager can change its status.")
+        previous = client.status
+        if action == "hold":
+            if previous not in ("onboarding", "active"):
+                raise BusinessRuleViolation("Only onboarding or active clients can be put on hold.")
+            client.status = "on_hold"
+        elif action == "complete":
+            if previous not in ("active", "on_hold") or not await self._repo.onboarded(client.id):
+                raise BusinessRuleViolation(
+                    "Only clients whose onboarding is completed can be marked completed."
+                )
+            client.status = "completed"
+        else:
+            if previous not in ("on_hold", "completed"):
+                raise BusinessRuleViolation("Only clients on hold or completed can be reactivated.")
+            client.status = "active" if await self._repo.onboarded(client.id) else "onboarding"
+        await self._repo.flush()
+        label = STATUS_LABELS[client.status]
+        await self._audit.record(
+            action="client.status_changed",
+            entity_type="client",
+            entity_id=client.id,
+            actor_user_id=actor.user_id,
+            changes={"status": [previous, client.status]},
+        )
+        await self._activity.record(
+            verb="status_changed",
+            subject_type="client",
+            subject_id=client.id,
+            actor_user_id=actor.user_id,
+            summary=f"Client status: {STATUS_LABELS[previous]} → {label}",
+        )
+        return await self._detail(actor, client, manager)
 
     # ------------------------------------------------------------ helpers
 
@@ -283,27 +414,27 @@ class ClientService:
             actor.can(CLIENTS_UPDATE) and client.account_manager_id == actor.user_id
         )
 
-    def _detail(self, actor: Actor, client: Client, manager: User) -> ClientDetail:
+    async def _detail(self, actor: Actor, client: Client, manager: User) -> ClientDetail:
+        last = await self._repo.last_activity([client.id])
+        fields = {name: getattr(client, name) for name in DETAIL_FIELDS}
+        if client.contract_value is not None:  # always two decimals, as stored
+            fields["contract_value"] = Decimal(client.contract_value).quantize(Decimal("0.01"))
         return ClientDetail(
-            id=client.id,
-            code=client.code,
-            name=client.name,
-            website=client.website,
-            domain=client.domain,
-            industry=client.industry,
-            contact_name=client.contact_name,
-            contact_email=client.contact_email,
+            **fields,
             status=client.status,  # type: ignore[arg-type]  # DB check constraint
             status_label=STATUS_LABELS[client.status],
             account_manager=_ref(manager),
             created_at=client.created_at,
             updated_at=client.updated_at,
+            last_activity_at=last.get(client.id),
             can_edit=self._can_edit(actor, client),
         )
 
     @staticmethod
     def _jsonable(value: object) -> object:
-        return str(value) if isinstance(value, uuid.UUID) else value
+        if isinstance(value, uuid.UUID | date | Decimal):
+            return str(value)
+        return value
 
     @classmethod
     def _value(cls, client: Client, field: str) -> object:

@@ -93,6 +93,8 @@ async def test_internal_then_client_approval(world: World) -> None:
     ]
     review = (await world.http.get("/api/v1/tasks", params={"view": "review"})).json()
     assert [t["id"] for t in review] == [tid]
+    bell = (await world.http.get("/api/v1/notifications")).json()["items"]
+    assert bell[0]["title"] == "Awaiting your internal review: Technical fixes roadmap v1"
     assert (await world.http.get(f"/api/v1/tasks/{tid}")).json()["permissions"]["decide"] is True
     no_note = await decide(world, request["id"], decision="changes")
     assert error(no_note) == "Add feedback explaining the requested changes."

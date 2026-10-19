@@ -45,6 +45,8 @@ FINANCE_VIEW: Final = "finance.view"
 USERS_APPROVE: Final = "users.approve"
 # HR (interim, from the HR brief): manage people records and the organisation;
 # see every employee's employment details; see others' personal information.
+# Schedule and run client meetings (AM, PM, Team Lead; the client's AM and team too).
+MEETINGS_MANAGE: Final = "meetings.manage"
 HR_MANAGE: Final = "hr.manage"
 HR_VIEW_ALL: Final = "hr.view_all"
 HR_PERSONAL_VIEW: Final = "hr.personal.view"
@@ -68,6 +70,7 @@ CATALOGUE: frozenset[str] = frozenset(
         FINANCE_MANAGE,
         FINANCE_VIEW,
         USERS_APPROVE,
+        MEETINGS_MANAGE,
         HR_MANAGE,
         HR_VIEW_ALL,
         HR_PERSONAL_VIEW,
@@ -107,6 +110,7 @@ DEFAULT_ROLES: Final[tuple[RoleDefinition, ...]] = (
                 APPROVALS_CLIENT_DECISION,
                 SERVICES_MANAGE,
                 FINANCE_VIEW,
+                MEETINGS_MANAGE,
             }
         ),
     ),
@@ -123,6 +127,7 @@ DEFAULT_ROLES: Final[tuple[RoleDefinition, ...]] = (
                 TASKS_REVIEW,
                 ONBOARDING_ACCESS_VERIFY,
                 JOBS_RUN,
+                MEETINGS_MANAGE,
             }
         ),
     ),
@@ -130,7 +135,7 @@ DEFAULT_ROLES: Final[tuple[RoleDefinition, ...]] = (
         "team_lead",
         "Team Lead",
         "",
-        frozenset({TASKS_CREATE, TASKS_REVIEW, ONBOARDING_ACCESS_VERIFY}),
+        frozenset({TASKS_CREATE, TASKS_REVIEW, ONBOARDING_ACCESS_VERIFY, MEETINGS_MANAGE}),
     ),
     RoleDefinition("employee", "Employee / Specialist"),
     RoleDefinition(

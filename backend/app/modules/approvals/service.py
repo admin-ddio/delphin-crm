@@ -32,6 +32,7 @@ from app.modules.approvals.repository import ApprovalRepository, ApprovalRow
 from app.modules.approvals.rules import STAGE_LABELS, OpenRequest, decision_block
 from app.modules.approvals.schemas import ApprovalItem, DecisionIn, SubmitIn
 from app.modules.clients.models import Client
+from app.modules.notifications.service import NotificationService
 from app.modules.tasks.models import Task
 from app.modules.tasks.repository import TaskRepository
 from app.modules.tasks.schemas import TaskDetail, UserRef
@@ -45,6 +46,7 @@ from app.modules.tasks.service import (
 from app.platform.activity.service import ActivityRecorder
 from app.platform.audit.service import AuditWriter
 from app.platform.identity.models import User
+from app.platform.notifications.interfaces import NotificationRequest
 
 NOT_FOUND = "This approval doesn't exist or you don't have access to it."
 
@@ -61,6 +63,7 @@ class ApprovalService:
         self._clock = clock
         self._audit = AuditWriter(session)
         self._activity = ActivityRecorder(session)
+        self._notifier = NotificationService(session)
 
     # ------------------------------------------------------------ reads
 
@@ -129,6 +132,20 @@ class ApprovalService:
             "approval.submitted",
             f'"{task.title}" v{version.number} submitted for {STAGE_LABELS[stage]}',
             changes={"status": [previous, task.status], "version": version.number},
+        )
+        approver = task.reviewer_id if stage == "internal" else client.account_manager_id
+        await self._notifier.notify_many(
+            [approver],
+            NotificationRequest(
+                user_id=actor.user_id,
+                kind="approval.requested",
+                title=f"Awaiting your {STAGE_LABELS[stage]}: {task.title} v{version.number}",
+                body=client.name,
+                link=f"/approvals?task={task.id}",
+                entity_type="task",
+                entity_id=str(task.id),
+            ),
+            exclude=actor.user_id,
         )
         return await self._task_service.get(actor, task.id)
 
@@ -210,6 +227,18 @@ class ApprovalService:
             action,
             summary,
             changes={"status": [previous, task.status], "stage": request.stage},
+        )
+        await self._notifier.notify_many(
+            [version.submitted_by_id],
+            NotificationRequest(
+                user_id=actor.user_id,
+                kind="approval.decided",
+                title=f"{summary[0].upper()}{summary[1:]}",
+                link=f"/tasks?view=all&task={task.id}",
+                entity_type="task",
+                entity_id=str(task.id),
+            ),
+            exclude=actor.user_id,
         )
         return await self._task_service.get(actor, task.id)
 

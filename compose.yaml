@@ -16,7 +16,9 @@ x-backend-env: &backend-env
   ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
   CORS_ORIGINS: ${CORS_ORIGINS:-}
   EXPOSE_DOCS: ${EXPOSE_DOCS:-false}
-  MAX_REQUEST_BODY_BYTES: ${MAX_REQUEST_BODY_BYTES:-10485760}
+  MAX_REQUEST_BODY_BYTES: ${MAX_REQUEST_BODY_BYTES:-12582912}
+  STORAGE_DIR: ${STORAGE_DIR:-/data/uploads}
+  MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-10485760}
   SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
   LOG_LEVEL: ${LOG_LEVEL:-INFO}
   FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:?set FIREBASE_PROJECT_ID in .env}
@@ -54,6 +56,8 @@ services:
   backend:
     build: *backend-build
     image: delphin-backend:local
+    volumes:
+      - uploads:/data/uploads
     command:
       - gunicorn
       - app.main:create_app()
@@ -126,3 +130,4 @@ services:
 
 volumes:
   pgdata:
+  uploads:

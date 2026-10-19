@@ -5,7 +5,8 @@ from __future__ import annotations
 import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -16,23 +17,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.authz.actor import Actor
 from app.authz.dependencies import get_actor
 from app.authz.permissions import DEFAULT_ROLES
+from app.core.clock import FixedClock
 from app.db.session import get_session
 from app.main import create_app
 from app.modules.clients.models import Client
+from app.modules.onboarding.service import OnboardingService
 from app.platform.audit.models import AuditLog
 from app.platform.identity.models import Role, User, UserRole
 from app.platform.identity.sessions import actor_for_user
+from app.platform.notifications.models import Notification
+from app.platform.storage.local import LocalStorage, get_storage
 from tests.conftest import make_settings
 
 pytestmark = pytest.mark.integration
 
-ANSWERS = {
-    "business_goals": "Grow qualified organic leads",
-    "products_services": "Industrial widgets",
-    "target_markets": "US and Canada",
-    "target_audiences": "Procurement managers",
-    "competitors": "WidgetCo",
-    "brand_voice": "Practical and expert",
+ANSWERS: dict[str, Any] = {
+    "business_goals": {
+        "goals": ["organic_traffic", "leads"],
+        "details": "Increase organic traffic by 40% in 12 months",
+    },
+    "target_markets": {"locations": "India, UAE", "audiences": "Procurement managers"},
+    "competitors": {"competitors": [{"name": "WidgetCo", "website": "widgetco.com"}]},
+    "brand_voice": {"tones": ["professional", "friendly"]},
+    "past_seo": {"worked_before": "yes", "details": "Agency until 2025"},
+    "additional": {"products_services": "Industrial widgets"},
 }
 
 
@@ -65,7 +73,11 @@ class World:
             "website": "acme.com",
             "industry": "Retail",
             "contact_name": "Pat Buyer",
+            "contact_designation": "Marketing Head",
             "contact_email": "pat@acme.com",
+            "contact_phone": "+91 98765 43210",
+            "contract_start": "2026-05-01",
+            "contract_end": "2027-04-30",
             "account_manager_id": str(manager.id),
             **fields,
         }
@@ -91,7 +103,9 @@ def error(response: httpx.Response) -> str:
 
 
 @pytest.fixture
-async def world(db_session: AsyncSession, migrated_database_url: str) -> AsyncIterator[World]:
+async def world(
+    db_session: AsyncSession, migrated_database_url: str, tmp_path: Path
+) -> AsyncIterator[World]:
     roles = {}
     for definition in DEFAULT_ROLES:
         role = Role(
@@ -108,12 +122,42 @@ async def world(db_session: AsyncSession, migrated_database_url: str) -> AsyncIt
 
     app.dependency_overrides[get_session] = session_override
     app.dependency_overrides[get_actor] = lambda: current[0]
+    app.dependency_overrides[get_storage] = lambda: LocalStorage(tmp_path)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as http:
         yield World(http=http, session=db_session, roles=roles, current=current)
 
 
-async def test_full_workflow_to_active(world: World) -> None:
+def stage(detail: dict[str, Any], key: str) -> str:
+    return str(next(s["state"] for s in detail["stages"] if s["key"] == key))
+
+
+async def notifications(w: World, user: User) -> list[str]:
+    rows = (
+        await w.session.execute(select(Notification.title).where(Notification.user_id == user.id))
+    ).scalars()
+    return list(rows)
+
+
+async def meeting(w: World, client_id: str, kind: str, **extra: Any) -> dict[str, Any]:
+    start = datetime.now(UTC) - timedelta(hours=2)
+    response = await w.http.post(
+        "/api/v1/meetings",
+        json={
+            "client_id": client_id,
+            "title": "Kickoff Call" if kind == "kickoff" else "Internal Kickoff",
+            "type": kind,
+            "starts_at": start.isoformat(),
+            "ends_at": (start + timedelta(hours=1)).isoformat(),
+            "platform": "google_meet",
+            **extra,
+        },
+    )
+    assert response.status_code == 201, response.text
+    return dict(response.json())
+
+
+async def test_full_workflow_to_active(world: World) -> None:  # the whole journey
     am = await world.user("anika@example.com", "account_manager")
     pm = await world.user("tomas@example.com", "project_manager")
     specialist = await world.user("jordan@example.com", "employee")
@@ -121,202 +165,273 @@ async def test_full_workflow_to_active(world: World) -> None:
     cid = await world.client(am)
 
     fresh = await world.detail(cid)
-    assert fresh["status"] == "in_progress"
-    assert fresh["progress"] == 15  # created + profile
+    assert fresh["client"]["status"] == "onboarding"
+    assert fresh["progress"] == 23  # contract (captured at creation), created, profile
+    assert [step(fresh, k) for k in ("contract", "created", "profile")] == ["done"] * 3
+    assert stage(fresh, "client") == "completed"
+    assert stage(fresh, "questionnaire") == "pending"
+    assert fresh["next_actions"][0]["title"] == "Send the onboarding questionnaire"
     assert [a["key"] for a in fresh["access"]] == ["GSC", "GA4", "CMS", "AHREFS", "GDRIVE"]
-    assert fresh["permissions"] == {"manage": True, "verify_access": True, "confirm_kpis": True}
+    assert fresh["access"][2]["label"] == "CMS Access"
+    assert fresh["permissions"]["manage"] is True
 
-    # 1. Contract: record, then sign → client status Onboarding.
-    assert "Record the contract" in error(await world.post(cid, "contract", {"action": "sign"}))
-    assert (await world.post(cid, "contract", {"action": "record"})).status_code == 200
-    signed = (await world.post(cid, "contract", {"action": "sign"})).json()
-    assert step(signed, "contract") == "done"
-    client = await world.session.get(Client, signed["client_id"])
-    assert client is not None
-    assert client.status == "onboarding"
-
-    # 4–5. Questionnaire via the public single-use link.
+    # 4–5. Questionnaire: a staff draft, then the client finishes via the public link.
+    draft = await world.http.put(
+        f"/api/v1/onboarding/clients/{cid}/questionnaire",
+        json={"answers": {"business_goals": ANSWERS["business_goals"]}},
+    )
+    q = draft.json()["questionnaire"]
+    assert q["status"] == "none"
+    assert [s["complete"] for s in q["sections"]] == [True, False, False, False, False, True]
     link = (await world.post(cid, "questionnaire/send")).json()
     token = re.search(r"/q/(\S+)$", link["url"])
-    assert token
-    public = await world.http.get(f"/api/v1/onboarding/questionnaire/{token.group(1)}")
-    assert public.status_code == 200
-    assert public.json()["client_name"] == "Acme Ltd"
-    assert len(public.json()["questions"]) == 6
-    partial = await world.http.post(
-        f"/api/v1/onboarding/questionnaire/{token.group(1)}",
-        json={"answers": {"business_goals": "x"}},
+    assert token is not None
+    public = f"/api/v1/onboarding/questionnaire/{token.group(1)}"
+    opened = (await world.http.get(public)).json()
+    assert opened["client_name"] == "Acme Ltd"
+    assert opened["answers"]["business_goals"]["goals"] == ["organic_traffic", "leads"]
+    assert len(opened["goals"]) == 9
+    saved = await world.http.put(public, json={"answers": {**ANSWERS, "past_seo": {}}})
+    assert saved.status_code == 200
+    incomplete = await world.http.post(public, json={"answers": {**ANSWERS, "past_seo": {}}})
+    assert incomplete.status_code == 422
+    assert "Past SEO Work: whether SEO was done before" in error(incomplete)
+    assert (await world.http.post(public, json={"answers": ANSWERS})).status_code == 204
+    assert (await world.http.get(public)).status_code == 404
+    submitted = await world.detail(cid)
+    assert (submitted["questionnaire"]["status"], submitted["questionnaire"]["source"]) == (
+        "submitted",
+        "client",
     )
-    assert partial.status_code == 422
-    submitted = await world.http.post(
-        f"/api/v1/onboarding/questionnaire/{token.group(1)}", json={"answers": ANSWERS}
-    )
-    assert submitted.status_code == 204
-    reused = await world.http.get(f"/api/v1/onboarding/questionnaire/{token.group(1)}")
-    assert reused.status_code == 404  # single use
-    after_q = await world.detail(cid)
-    assert step(after_q, "q_done") == "done"
-    assert after_q["questions"][0]["answer"] == "Grow qualified organic leads"
+    assert stage(submitted, "questionnaire") == "completed"
+    assert "Acme Ltd submitted the onboarding questionnaire" in await notifications(world, am)
 
-    # 6–7. Access: verify needs "received"; a PM verifies.
-    early = await world.http.patch(
-        f"/api/v1/onboarding/clients/{cid}/access/GSC", json={"status": "verified"}
+    # 6–7. Access: request all, receive, verify (a rejection blocks until received again).
+    requested = (await world.post(cid, "access/bulk", {"status": "requested"})).json()
+    assert {a["status"] for a in requested["access"]} == {"requested"}
+    assert all(a["requested_at"] for a in requested["access"])
+    await world.http.patch(
+        f"/api/v1/onboarding/clients/{cid}/access/GSC", json={"status": "received"}
     )
-    assert "received before it can be verified" in error(early)
-    assert (await world.post(cid, "access/receive-all")).status_code == 200
+    await world.act_as(pm)
+    rejected = await world.http.patch(
+        f"/api/v1/onboarding/clients/{cid}/access/GSC", json={"status": "rejected"}
+    )
+    assert rejected.json()["status"] == "blocked"
+    assert "Acme Ltd: Google Search Console access was rejected" in await notifications(world, am)
+    noted = await world.http.patch(
+        f"/api/v1/onboarding/clients/{cid}/access/GSC/details",
+        json={"notes": "Wrong property shared"},
+    )
+    assert noted.json()["access"][0]["notes"] == "Wrong property shared"
+    await world.act_as(am)
+    await world.post(cid, "access/bulk", {"status": "received"})
+    again = await world.http.patch(
+        f"/api/v1/onboarding/clients/{cid}/access/GSC", json={"status": "received"}
+    )
+    assert again.json()["status"] == "in_progress"  # no longer blocked
+    added = await world.post(cid, "access", {"label": "Search Ads", "description": "Google Ads"})
+    custom = next(a for a in added.json()["access"] if a["label"] == "Search Ads")
+    assert (custom["key"], custom["is_custom"]) == ("SEARCH_ADS", True)
+    removed = await world.http.delete(f"/api/v1/onboarding/clients/{cid}/access/SEARCH_ADS")
+    assert len(removed.json()["access"]) == 5
+    builtin = await world.http.delete(f"/api/v1/onboarding/clients/{cid}/access/GSC")
+    assert builtin.status_code == 422
     await world.act_as(pm)
     for key in ("GSC", "GA4", "CMS", "AHREFS", "GDRIVE"):
         verified = await world.http.patch(
             f"/api/v1/onboarding/clients/{cid}/access/{key}", json={"status": "verified"}
         )
         assert verified.status_code == 200, verified.text
-    assert verified.json()["access"][0]["verified_by"]["full_name"] == "Tomas"
-    assert step(verified.json(), "access_ok") == "done"
-    # A PM may verify but not run the workflow.
-    assert (
-        await world.post(cid, "kpis", {"metric": "x", "baseline": 1, "target": 2, "unit": "u"})
-    ).status_code == 403
+    access_done = verified.json()
+    assert access_done["access_summary"] == {"required": 5, "verified": 5, "percent": 100}
+    assert access_done["access"][0]["verified_by"]["full_name"] == "Tomas"
+    assert stage(access_done, "access") == "completed"
+
+    # 8. KPIs: targets, client confirmation; changing a target needs it again.
     await world.act_as(am)
-
-    # 8. KPIs need the client's confirmation.
+    target_date = (datetime.now(UTC) + timedelta(days=365)).date().isoformat()
     kpi = {
-        "metric": "Organic sessions",
-        "baseline": "1200",
-        "target": "3000",
-        "unit": "sessions / month",
+        "metric": "Organic Sessions",
+        "description": "Total organic sessions",
+        "baseline": "10000",
+        "target": "14000",
+        "unit": "/ month",
+        "target_date": target_date,
     }
-    assert (await world.post(cid, "kpis", kpi)).status_code == 200
-    confirmed = (
-        await world.post(cid, "kpis/confirm", {"confirmed_by": "Pat Buyer", "via": "email"})
-    ).json()
-    assert confirmed["kpis"][0]["confirmed_by_name"] == "Pat Buyer"
+    await world.post(cid, "kpis", kpi)
+    with_two = (await world.post(cid, "kpis", {**kpi, "metric": "Qualified Leads"})).json()
+    assert with_two["kpi_summary"]["not_measured"] == 2
+    confirm = {"confirmed_by": "John Doe", "via": "meeting"}
+    confirmed = (await world.post(cid, "kpis/confirm", confirm)).json()
+    assert confirmed["kpi_summary"]["confirmed_by"] == "John Doe"
     assert step(confirmed, "kpi") == "done"
-
-    # 9–10. Kickoffs and team.
-    assert "Schedule the client kickoff" in error(
-        await world.post(cid, "kickoffs/client", {"action": "complete"})
+    kpi_id = confirmed["kpis"][0]["id"]
+    moved = await world.http.patch(
+        f"/api/v1/onboarding/clients/{cid}/kpis/{kpi_id}", json={"target": "15000"}
     )
-    await world.post(cid, "kickoffs/client", {"action": "schedule", "at": "2026-11-02T10:00:00Z"})
-    await world.post(cid, "kickoffs/client", {"action": "complete", "notes": "Goals agreed"})
-    options = (await world.http.get(f"/api/v1/onboarding/clients/{cid}/team/options")).json()
-    assert {o["full_name"] for o in options} == {"Tomas", "Jordan"}
-    team = await world.post(cid, "team", {"user_id": str(specialist.id)})
-    assert team.json()["team"][0]["full_name"] == "Jordan"
-    assert (await world.post(cid, "team", {"user_id": str(specialist.id)})).status_code == 409
-    await world.post(cid, "kickoffs/internal", {"action": "schedule"})
+    assert step(moved.json(), "kpi") == "progress"
+    await world.post(cid, "kpis/confirm", confirm)
+    tracked = await world.http.patch(
+        f"/api/v1/onboarding/clients/{cid}/kpis/{kpi_id}", json={"current_value": "12500"}
+    )
+    first = tracked.json()["kpis"][0]
+    assert (first["progress"], first["status"], first["confirmed_at"] is not None) == (
+        50,
+        "achieved" if first["progress"] >= 100 else first["status"],
+        True,
+    )
+    assert first["status"] in ("on_track", "at_risk", "behind")
+    notes = await world.http.put(
+        f"/api/v1/onboarding/clients/{cid}/kpi-notes", json={"notes": "Reviewed quarterly"}
+    )
+    assert notes.json()["kpi_summary"]["notes"] == "Reviewed quarterly"
 
-    # 11. Review is gated on steps 1–10.
-    blocked = await world.post(cid, "review")
-    assert blocked.status_code == 422
-    assert "Internal team kickoff" in error(blocked)
-    await world.post(cid, "kickoffs/internal", {"action": "complete", "notes": "Roles assigned"})
-    assert step((await world.post(cid, "review")).json(), "review") == "done"
+    # 9–10. Kickoffs are meetings; the internal one also needs a team.
+    kickoff = await meeting(
+        world,
+        cid,
+        "kickoff",
+        attendee_ids=[str(pm.id)],
+        guests=[{"name": "John Doe", "email": "john@acme.com", "organisation": "Acme"}],
+        agenda="Goals, markets, access",
+    )
+    assert step(await world.detail(cid), "kickoff_client") == "progress"
+    assert "Meeting scheduled: Kickoff Call" in await notifications(world, pm)
+    done = await world.http.post(
+        f"/api/v1/meetings/{kickoff['id']}/complete", json={"notes": "Goals agreed"}
+    )
+    assert done.json()["status"] == "completed"
+    team = await world.post(
+        cid,
+        "team",
+        {
+            "user_id": str(specialist.id),
+            "area": "seo",
+            "role_title": "SEO Specialist",
+            "responsibilities": "Audit and on-page work",
+            "allocation": 50,
+        },
+    )
+    member = team.json()["team"][0]
+    assert (member["role_title"], member["area"], member["allocation"]) == (
+        "SEO Specialist",
+        "seo",
+        50,
+    )
+    seo = next(c for c in team.json()["coverage"] if c["area"] == "seo")
+    assert [m["full_name"] for m in seo["members"]] == ["Jordan"]
+    assert "You've been added to the Acme Ltd team as SEO Specialist" in await notifications(
+        world, specialist
+    )
+    internal = await meeting(world, cid, "internal", attendee_ids=[str(specialist.id)])
+    await world.http.post(
+        f"/api/v1/meetings/{internal['id']}/complete", json={"notes": "Roles agreed"}
+    )
+    ready = await world.detail(cid)
+    assert step(ready, "kickoff_internal") == "done"
+    assert stage(ready, "kickoff") == "completed"
 
-    # 12. Completion → client Active, workflow locked.
-    done = (await world.post(cid, "complete")).json()
-    assert done["status"] == "completed"
-    assert done["progress"] == 92
-    assert done["permissions"]["manage"] is False
-    await world.session.refresh(client)
+    # 11–12. Review, completion → Active; the team hears about it.
+    assert (await world.post(cid, "review")).status_code == 200
+    completed = (await world.post(cid, "complete")).json()
+    assert completed["status"] == "completed"
+    assert completed["client"]["status"] == "active"
+    assert completed["locked_reason"] == "Onboarding is completed."
+    assert step(completed, "project") == "progress"
+    client = await world.session.get(Client, completed["client"]["id"])
+    assert client is not None
     assert client.status == "active"
-    assert "already completed" in error(await world.post(cid, "contract", {"action": "record"}))
+    assert "Acme Ltd is onboarded — project creation is open" in await notifications(
+        world, specialist
+    )
+    # Current KPI values stay trackable after onboarding.
+    after = await world.http.patch(
+        f"/api/v1/onboarding/clients/{cid}/kpis/{kpi_id}", json={"current_value": "13000"}
+    )
+    assert after.status_code == 200
+    frozen = await world.http.patch(
+        f"/api/v1/onboarding/clients/{cid}/kpis/{kpi_id}", json={"target": "20000"}
+    )
+    assert error(frozen) == "Onboarding is already completed."
+    audit = (
+        await world.session.execute(
+            select(AuditLog.action).where(AuditLog.action.like("onboarding.%"))
+        )
+    ).scalars()
+    assert "onboarding.completed" in set(audit)
 
-    # The specialist on the team now sees the client (but can't run onboarding).
-    await world.act_as(specialist)
-    assert (await world.http.get(f"/api/v1/clients/{cid}")).status_code == 200
-    assert (await world.detail(cid))["permissions"]["manage"] is False
 
-    # Everything is on the timeline and in the audit log.
-    activity = (await world.http.get(f"/api/v1/clients/{cid}/activity")).json()
-    summaries = [a["summary"] for a in activity]
-    assert "Onboarding completed — the client is now Active" in summaries
-    assert "Client submitted the onboarding questionnaire" in summaries
-    assert "Pat Buyer confirmed the KPI targets via e-mail" in summaries
-    actions = set((await world.session.execute(select(AuditLog.action))).scalars().all())
-    assert {"onboarding.contract_sign", "onboarding.completed", "onboarding.reviewed"} <= actions
-
-
-async def test_completion_gates_and_blocking(world: World) -> None:
-    am = await world.user("am@example.com", "account_manager")
+async def test_completion_gates_and_on_hold(world: World) -> None:
+    am = await world.user("anika@example.com", "account_manager")
     await world.act_as(am)
     cid = await world.client(am)
-
-    assert "access items must be verified" in error(await world.post(cid, "complete"))
-
-    await world.post(cid, "access/receive-all")
-    rejected = await world.http.patch(
-        f"/api/v1/onboarding/clients/{cid}/access/GA4", json={"status": "rejected"}
+    early = await world.post(cid, "complete")
+    assert error(early) == (
+        "All required access items must be verified before onboarding can be completed."
     )
-    body = rejected.json()
-    assert body["status"] == "blocked"
-    assert step(body, "access_in") == "blocked"
-    # Re-receiving clears the block.
-    again = await world.http.patch(
-        f"/api/v1/onboarding/clients/{cid}/access/GA4", json={"status": "received"}
-    )
-    assert again.json()["status"] == "in_progress"
-    for key in ("GSC", "GA4", "CMS", "AHREFS", "GDRIVE"):
-        await world.http.patch(
-            f"/api/v1/onboarding/clients/{cid}/access/{key}", json={"status": "verified"}
-        )
-    assert "KPI targets require client confirmation" in error(await world.post(cid, "complete"))
+    review = await world.post(cid, "review")
+    assert error(review).startswith("Review can't pass yet. Incomplete:")
 
-    await world.post(cid, "kpis", {"metric": "Leads", "baseline": 1, "target": 5, "unit": "leads"})
-    await world.post(cid, "kpis/confirm", {"confirmed_by": "Pat", "via": "call"})
-    incomplete = await world.post(cid, "complete")
-    assert "Can't complete onboarding. Incomplete:" in error(incomplete)
-    assert "Contract signed" in incomplete.json()["error"]["details"]["incomplete"]
+    # On hold: nothing moves until the client is reactivated.
+    await world.http.post(f"/api/v1/clients/{cid}/status", json={"action": "hold"})
+    held = await world.detail(cid)
+    assert held["locked_reason"] == "This client is on hold. Reactivate it to continue onboarding."
+    assert held["permissions"]["manage"] is False
+    blocked = await world.post(cid, "questionnaire/send")
+    assert error(blocked) == "This client is on hold. Reactivate it to continue onboarding."
+    await world.http.post(f"/api/v1/clients/{cid}/status", json={"action": "reactivate"})
+    assert (await world.post(cid, "questionnaire/send")).status_code == 200
 
-    # Confirmed KPIs can't be removed.
-    kpi_id = (await world.detail(cid))["kpis"][0]["id"]
-    removed = await world.http.delete(f"/api/v1/onboarding/clients/{cid}/kpis/{kpi_id}")
-    assert "confirmed can't be removed" in error(removed)
+    # Staff can record the answers (complete ones only).
+    partial = await world.post(cid, "questionnaire/submit", {"answers": {}})
+    assert partial.status_code == 422
+    recorded = (await world.post(cid, "questionnaire/submit", {"answers": ANSWERS})).json()
+    assert recorded["questionnaire"]["source"] == "staff"
 
 
 async def test_only_the_clients_account_manager_runs_onboarding(world: World) -> None:
-    owner = await world.user("owner@example.com", "account_manager")
-    other = await world.user("other@example.com", "account_manager")
-    employee = await world.user("emp@example.com", "employee")
-    finance = await world.user("fin@example.com", "finance")
-    await world.act_as(owner)
-    cid = await world.client(owner)
+    am = await world.user("anika@example.com", "account_manager")
+    other_am = await world.user("omar@example.com", "account_manager")
+    lead = await world.user("mei@example.com", "team_lead")
+    outsider = await world.user("sam@example.com", "employee")
+    await world.act_as(am)
+    cid = await world.client(am)
+    await world.post(cid, "team", {"user_id": str(lead.id)})
 
-    await world.act_as(other)
-    assert (await world.detail(cid))["permissions"]["manage"] is False
-    denied = await world.post(cid, "contract", {"action": "record"})
-    assert denied.status_code == 403
-    assert "Account Manager" in error(denied)
-
-    await world.act_as(finance)  # sees the client, can't verify access
-    await world.act_as(owner)
-    await world.post(cid, "access/receive-all")
-    await world.act_as(finance)
-    assert (
-        await world.http.patch(
-            f"/api/v1/onboarding/clients/{cid}/access/GSC", json={"status": "verified"}
-        )
-    ).status_code == 403
-
-    await world.act_as(employee)  # not on the team: the client doesn't exist for them
+    await world.act_as(other_am)
+    view = await world.detail(cid)
+    assert view["permissions"]["manage"] is False
+    assert (await world.post(cid, "questionnaire/send")).status_code == 403
+    await world.act_as(lead)
+    assert (await world.detail(cid))["permissions"]["verify_access"] is True
+    await world.act_as(outsider)
     assert (await world.http.get(f"/api/v1/onboarding/clients/{cid}")).status_code == 404
 
 
-async def test_board_lists_progress_and_manual_answers(world: World) -> None:
-    am = await world.user("am@example.com", "account_manager")
+async def test_board_lists_progress(world: World) -> None:
+    am = await world.user("anika@example.com", "account_manager")
     await world.act_as(am)
-    first = await world.client(am, name="Beta Co", website="beta.io")
-    await world.client(am, name="Alpha Co", website="alpha.io", industry=None)
-
-    await world.post(first, "questionnaire/send")
-    missing = await world.post(first, "questionnaire/answers", {"answers": {"brand_voice": "Calm"}})
-    assert missing.status_code == 422
-    assert "Please answer every question" in error(missing)
-    recorded = await world.post(first, "questionnaire/answers", {"answers": ANSWERS})
-    assert step(recorded.json(), "q_done") == "done"
-
+    first = await world.client(am)
+    await world.client(am, name="Beta Co", website="beta.io")
+    await world.post(first, "questionnaire/submit", {"answers": ANSWERS})
     board = (await world.http.get("/api/v1/onboarding")).json()
-    assert [row["client_name"] for row in board] == ["Alpha Co", "Beta Co"]
-    alpha = board[0]
-    assert alpha["current_step"] == "Contract signed"
-    assert alpha["progress"] == 8  # profile incomplete (no industry)
-    assert board[1]["progress"] == 31  # created, profile, q sent, q done
+    assert [(r["client_name"], r["progress"], r["client_status"]) for r in board] == [
+        ("Acme Ltd", 38, "onboarding"),
+        ("Beta Co", 23, "onboarding"),
+    ]
+    assert board[0]["current_step"] == "Platform access collected"
+
+
+async def test_overdue_reminders_job(world: World) -> None:
+    am = await world.user("anika@example.com", "account_manager")
+    await world.act_as(am)
+    await world.client(am)
+    clock = FixedClock(datetime.now(UTC) + timedelta(days=20))
+    service = OnboardingService(world.session, clock=clock, settings=make_settings())
+    assert await service.remind_overdue() == {"checked": 1, "reminders": 1}
+    assert await service.remind_overdue() == {"checked": 1, "reminders": 0}  # once a day
+    titles = await notifications(world, am)
+    assert titles == ["Acme Ltd: Send the onboarding questionnaire is overdue (+9 more overdue)"]
+    clock.advance(timedelta(days=1, minutes=1))
+    assert (await service.remind_overdue())["reminders"] == 1

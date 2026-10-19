@@ -1,16 +1,18 @@
-"""Onboarding tables (interim shape from the clickable demo's 13-step workflow).
+"""Onboarding tables (13-step workflow; shape from the product mockups, 2026-10-19).
 
-TODO(pilot-port): reconcile with the onboarding models in schema.prisma.
+The contract lives on the client (captured at creation); kickoffs are meetings
+(app.modules.meetings). TODO(pilot-port): reconcile with schema.prisma.
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     ForeignKey,
     Index,
@@ -18,6 +20,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    false,
     func,
     text,
 )
@@ -28,42 +31,38 @@ from app.db.base import Base, UUIDPrimaryKey
 
 
 class ClientOnboarding(Base):
-    """One row per client: the state of steps 1, 4–5, 9–12."""
+    """One row per client: questionnaire, KPI notes, review and completion."""
 
     __tablename__ = "client_onboarding"
     __mapper_args__ = {"eager_defaults": True}  # noqa: RUF012
     __table_args__ = (
-        CheckConstraint("contract IN ('none', 'draft', 'signed')", name="contract"),
         CheckConstraint("questionnaire IN ('none', 'sent', 'submitted')", name="questionnaire"),
-        CheckConstraint("kickoff_client IN ('none', 'scheduled', 'done')", name="kickoff_client"),
         CheckConstraint(
-            "kickoff_internal IN ('none', 'scheduled', 'done')", name="kickoff_internal"
+            "questionnaire_source IS NULL OR questionnaire_source IN ('client', 'staff')",
+            name="questionnaire_source",
         ),
     )
 
     client_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("clients.id", ondelete="CASCADE"), primary_key=True
     )
-    contract: Mapped[str] = mapped_column(String(10), nullable=False, server_default=text("'none'"))
-    contract_signed_at: Mapped[datetime | None]
     questionnaire: Mapped[str] = mapped_column(
         String(10), nullable=False, server_default=text("'none'")
     )
     questionnaire_sent_at: Mapped[datetime | None]
     questionnaire_submitted_at: Mapped[datetime | None]
+    #: Who submitted: the client (public link) or staff on their behalf.
+    questionnaire_source: Mapped[str | None] = mapped_column(String(10))
+    #: Structured answers (see onboarding.questionnaire); drafts may be partial.
     questionnaire_answers: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, server_default=text("'{}'::jsonb")
     )
-    kickoff_client: Mapped[str] = mapped_column(
-        String(10), nullable=False, server_default=text("'none'")
+    questionnaire_updated_at: Mapped[datetime | None]
+    kpi_notes: Mapped[str | None] = mapped_column(Text)
+    kpi_notes_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
     )
-    kickoff_client_at: Mapped[datetime | None]
-    kickoff_client_notes: Mapped[str | None] = mapped_column(Text)
-    kickoff_internal: Mapped[str] = mapped_column(
-        String(10), nullable=False, server_default=text("'none'")
-    )
-    kickoff_internal_at: Mapped[datetime | None]
-    kickoff_internal_notes: Mapped[str | None] = mapped_column(Text)
+    kpi_notes_at: Mapped[datetime | None]
     reviewed_at: Mapped[datetime | None]
     reviewed_by_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
@@ -97,14 +96,20 @@ class OnboardingAccessItem(UUIDPrimaryKey, Base):
     )
     key: Mapped[str] = mapped_column(String(20), nullable=False)
     label: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(300))
     position: Mapped[int] = mapped_column(nullable=False, server_default=text("0"))
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default=text("'pending'")
     )
+    #: Added by the team for this client (the five defaults are not).
+    is_custom: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
+    requested_at: Mapped[datetime | None]
+    received_at: Mapped[datetime | None]
     verified_by_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
     verified_at: Mapped[datetime | None]
+    notes: Mapped[str | None] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(
         nullable=False, server_default=func.now(), onupdate=func.now()
     )
@@ -121,9 +126,13 @@ class OnboardingKpi(UUIDPrimaryKey, Base):
         ForeignKey("clients.id", ondelete="CASCADE"), nullable=False
     )
     metric: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(200))
     baseline: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     target: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     unit: Mapped[str] = mapped_column(String(60), nullable=False)
+    target_date: Mapped[date | None]
+    current_value: Mapped[Decimal | None] = mapped_column(Numeric(18, 4))
+    current_updated_at: Mapped[datetime | None]
     confirmed_by_name: Mapped[str | None] = mapped_column(String(200))
     confirmed_via: Mapped[str | None] = mapped_column(String(30))
     confirmed_at: Mapped[datetime | None]
