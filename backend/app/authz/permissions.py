@@ -43,6 +43,11 @@ FINANCE_MANAGE: Final = "finance.manage"
 FINANCE_VIEW: Final = "finance.view"
 # Approve or reject self sign-ups (only Super Admin has it until permissions.ts is ported).
 USERS_APPROVE: Final = "users.approve"
+# HR (interim, from the HR brief): manage people records and the organisation;
+# see every employee's employment details; see others' personal information.
+HR_MANAGE: Final = "hr.manage"
+HR_VIEW_ALL: Final = "hr.view_all"
+HR_PERSONAL_VIEW: Final = "hr.personal.view"
 
 CATALOGUE_SOURCE: Literal["clickable-demo", "pilot"] = "clickable-demo"
 CATALOGUE: frozenset[str] = frozenset(
@@ -63,6 +68,9 @@ CATALOGUE: frozenset[str] = frozenset(
         FINANCE_MANAGE,
         FINANCE_VIEW,
         USERS_APPROVE,
+        HR_MANAGE,
+        HR_VIEW_ALL,
+        HR_PERSONAL_VIEW,
     }
 )
 
@@ -130,6 +138,13 @@ DEFAULT_ROLES: Final[tuple[RoleDefinition, ...]] = (
         "Finance",
         "",
         frozenset({CLIENTS_VIEW_ALL, PROJECTS_VIEW_ALL, FINANCE_MANAGE, FINANCE_VIEW}),
+    ),
+    # From the HR brief: onboarding, profiles, departments and reporting lines.
+    RoleDefinition(
+        "hr_admin",
+        "HR / Operations Admin",
+        "",
+        frozenset({HR_MANAGE, HR_VIEW_ALL, HR_PERSONAL_VIEW}),
     ),
 )
 

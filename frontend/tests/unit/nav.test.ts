@@ -9,7 +9,9 @@ const resolves = (href: string) =>
   ALL_ROUTE_SPECS.some((spec) => matchPath({ path: spec.path, end: true }, href));
 
 const labelsFor = (role: keyof typeof DEFAULT_ROLE_PERMISSIONS) =>
-  visibleNav(DEFAULT_ROLE_PERMISSIONS[role]).flatMap((group) => group.items.map((item) => item.label));
+  visibleNav(DEFAULT_ROLE_PERMISSIONS[role]).flatMap((group) =>
+    group.items.map((item) => item.label),
+  );
 
 describe('navigation model', () => {
   it('links only to registered routes', () => {
@@ -26,12 +28,13 @@ describe('navigation model', () => {
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
 
-  it('matches the clickable demo rail (groups, order, labels)', () => {
+  it('matches the clickable demo rail plus the People group from the HR brief', () => {
     expect(navGroups.map((g) => [g.label, g.items.map((i) => i.label)])).toEqual([
       ['Overview', ['Dashboard']],
       ['Clients', ['CRM & Clients', 'Client Onboarding']],
       ['Delivery', ['Projects', 'Tasks & Work', 'Approvals']],
       ['Services', ['Services & Retainers']],
+      ['People', ['Employees', 'Departments & Org chart']],
       ['Organisation', ['Finance & Billing', 'Team & Roles', 'Activity log']],
     ]);
   });
@@ -47,7 +50,10 @@ describe('navigation model', () => {
 
   it('filters by permission and drops empty groups', () => {
     const groups = [
-      { label: 'Money', items: [{ label: 'Finance', href: '/finance', permission: 'finance.view' }] },
+      {
+        label: 'Money',
+        items: [{ label: 'Finance', href: '/finance', permission: 'finance.view' }],
+      },
       { label: 'Open', items: [{ label: 'Dashboard', href: '/dashboard' }] },
     ];
     expect(visibleNav([], groups).map((g) => g.label)).toEqual(['Open']);

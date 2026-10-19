@@ -46,6 +46,9 @@ export const P = {
   financeManage: 'finance.manage',
   financeView: 'finance.view',
   usersApprove: 'users.approve',
+  hrManage: 'hr.manage',
+  hrViewAll: 'hr.view_all',
+  hrPersonalView: 'hr.personal.view',
 } as const;
 
 export const ROLE_KEYS = [
@@ -56,6 +59,7 @@ export const ROLE_KEYS = [
   'team_lead',
   'employee',
   'finance',
+  'hr_admin',
 ] as const;
 export type RoleKey = (typeof ROLE_KEYS)[number];
 
@@ -67,6 +71,7 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
   team_lead: 'Team Lead',
   employee: 'Employee / Specialist',
   finance: 'Finance',
+  hr_admin: 'HR / Operations Admin',
 };
 
 /**
@@ -102,4 +107,5 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, readonly Permission[]> = 
   team_lead: [P.tasksCreate, P.tasksReview, P.accessVerify],
   employee: [],
   finance: [P.clientsViewAll, P.projectsViewAll, P.financeManage, P.financeView],
+  hr_admin: [P.hrManage, P.hrViewAll, P.hrPersonalView],
 };

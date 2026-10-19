@@ -160,9 +160,14 @@ class TaskService:
     # ------------------------------------------------------------ reads
 
     async def list_tasks(
-        self, actor: Actor, *, view: Literal["mine", "review", "all"], open_only: bool
+        self,
+        actor: Actor,
+        *,
+        view: Literal["mine", "review", "all"],
+        open_only: bool,
+        assignee_id: uuid.UUID | None = None,
     ) -> list[TaskItem]:
-        assignee = actor.user_id if view == "mine" else None
+        assignee = actor.user_id if view == "mine" else assignee_id
         reviewer = actor.user_id if view == "review" else None
         rows = await self._repo.list_tasks(
             actor, assignee=assignee, reviewer=reviewer, open_only=open_only

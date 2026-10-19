@@ -51,9 +51,11 @@ async def list_tasks(
     service: Service,
     view: Annotated[Literal["mine", "review", "all"], Query()] = "mine",
     open_only: Annotated[bool, Query()] = True,
+    assignee_id: Annotated[uuid.UUID | None, Query(description="With view=all")] = None,
 ) -> list[TaskItem]:
-    """Assigned to me (default), awaiting my internal review, or every visible task."""
-    return await service.list_tasks(actor, view=view, open_only=open_only)
+    """Assigned to me (default), awaiting my internal review, or every visible task
+    (optionally one person's, e.g. an employee profile's workload)."""
+    return await service.list_tasks(actor, view=view, open_only=open_only, assignee_id=assignee_id)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=TaskDetail, responses=ERRORS)

@@ -1,11 +1,14 @@
-"""Request/response models for the team module."""
+"""Request/response models for the team module: sign-up approvals and people core."""
 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, EmailStr, Field
+
+# ---------------------------------------------------------------- sign-up approvals
 
 
 class PendingRegistration(BaseModel):
@@ -19,3 +22,195 @@ class PendingRegistration(BaseModel):
 
 class ApproveRegistrationRequest(BaseModel):
     role: str = Field(min_length=1, max_length=64)
+
+
+# ---------------------------------------------------------------- people core
+
+
+def _strip(value: object) -> object:
+    if isinstance(value, str):
+        value = value.strip()
+        return value or None
+    return value
+
+
+Text = Annotated[str | None, BeforeValidator(_strip)]
+EmploymentType = Literal["full_time", "part_time", "intern", "contractor", "consultant"]
+WorkArrangement = Literal["remote", "hybrid", "office"]
+EmployeeStatus = Literal["onboarding", "probation", "active", "notice", "on_hold", "exited"]
+
+
+class Ref(BaseModel):
+    id: uuid.UUID
+    name: str
+
+
+class PersonRef(BaseModel):
+    id: uuid.UUID
+    code: str
+    full_name: str
+
+
+class EmployeeListItem(BaseModel):
+    id: uuid.UUID
+    code: str
+    full_name: str
+    preferred_name: str | None
+    official_email: str | None
+    designation: Ref | None
+    department: Ref | None
+    manager: PersonRef | None
+    status: EmployeeStatus
+    status_label: str
+    #: The linked sign-in account (for workload views); None if not linked.
+    user_id: uuid.UUID | None
+    is_me: bool
+
+
+class DottedLine(BaseModel):
+    id: uuid.UUID
+    manager: PersonRef
+    starts_on: date
+
+
+class Employment(BaseModel):
+    """Visible to the employee, their managers / department head, and `hr.view_all`."""
+
+    employment_type: EmploymentType
+    work_arrangement: WorkArrangement | None
+    joining_date: date | None
+    leave_approver: PersonRef | None
+    #: The approver that applies: leave_approver, else the direct manager.
+    effective_leave_approver: PersonRef | None
+    dotted_lines: list[DottedLine]
+    department_head: PersonRef | None
+    has_account: bool
+
+
+class Personal(BaseModel):
+    """Visible to the employee and `hr.personal.view` only."""
+
+    personal_email: str | None
+    phone: str | None
+    date_of_birth: date | None
+    current_address: str | None
+    permanent_address: str | None
+    emergency_name: str | None
+    emergency_relationship: str | None
+    emergency_phone: str | None
+
+
+class EmployeePermissions(BaseModel):
+    manage: bool
+    edit_personal: bool
+
+
+class EmployeeDetail(EmployeeListItem):
+    created_at: datetime
+    direct_reports: list[PersonRef]
+    #: None when the viewer may not see it.
+    employment: Employment | None
+    personal: Personal | None
+    permissions: EmployeePermissions
+
+
+class EmployeeCreate(BaseModel):
+    full_name: Annotated[str, BeforeValidator(_strip)] = Field(min_length=1, max_length=200)
+    preferred_name: Text = Field(default=None, max_length=100)
+    official_email: EmailStr | None = None
+    department_id: uuid.UUID | None = None
+    designation_id: uuid.UUID | None = None
+    employment_type: EmploymentType = "full_time"
+    work_arrangement: WorkArrangement | None = None
+    status: Literal["onboarding", "probation", "active"] = "onboarding"
+    joining_date: date | None = None
+    manager_id: uuid.UUID | None = None
+    leave_approver_id: uuid.UUID | None = None
+    user_id: uuid.UUID | None = None
+
+
+class EmployeeUpdate(BaseModel):
+    """Partial: only fields sent are changed. `manager_id: null` removes the manager."""
+
+    full_name: Text = Field(default=None, max_length=200)
+    preferred_name: Text = Field(default=None, max_length=100)
+    official_email: EmailStr | None = None
+    department_id: uuid.UUID | None = None
+    designation_id: uuid.UUID | None = None
+    employment_type: EmploymentType | None = None
+    work_arrangement: WorkArrangement | None = None
+    status: EmployeeStatus | None = None
+    joining_date: date | None = None
+    manager_id: uuid.UUID | None = None
+    leave_approver_id: uuid.UUID | None = None
+    user_id: uuid.UUID | None = None
+
+
+class PersonalUpdate(BaseModel):
+    preferred_name: Text = Field(default=None, max_length=100)
+    personal_email: EmailStr | None = None
+    phone: Text = Field(default=None, max_length=40)
+    date_of_birth: date | None = None
+    current_address: Text = Field(default=None, max_length=1000)
+    permanent_address: Text = Field(default=None, max_length=1000)
+    emergency_name: Text = Field(default=None, max_length=200)
+    emergency_relationship: Text = Field(default=None, max_length=100)
+    emergency_phone: Text = Field(default=None, max_length=40)
+
+
+class DottedLineIn(BaseModel):
+    manager_id: uuid.UUID
+
+
+class EmploymentEventOut(BaseModel):
+    id: uuid.UUID
+    kind: str
+    summary: str
+    effective_on: date | None
+    occurred_at: datetime
+    actor: str | None
+    changes: dict[str, Any] | None
+
+
+class UserOption(BaseModel):
+    id: uuid.UUID
+    full_name: str
+    email: str
+
+
+class DepartmentOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    description: str | None
+    head: PersonRef | None
+    headcount: int
+    is_active: bool
+
+
+class DepartmentIn(BaseModel):
+    name: Annotated[str, BeforeValidator(_strip)] = Field(min_length=1, max_length=100)
+    description: Text = Field(default=None, max_length=1000)
+    head_id: uuid.UUID | None = None
+
+
+class DepartmentUpdate(BaseModel):
+    name: Text = Field(default=None, max_length=100)
+    description: Text = Field(default=None, max_length=1000)
+    head_id: uuid.UUID | None = None
+    is_active: bool | None = None
+
+
+class DesignationOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    is_active: bool
+    headcount: int
+
+
+class DesignationIn(BaseModel):
+    name: Annotated[str, BeforeValidator(_strip)] = Field(min_length=1, max_length=100)
+
+
+class DesignationUpdate(BaseModel):
+    name: Text = Field(default=None, max_length=100)
+    is_active: bool | None = None

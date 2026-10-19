@@ -36,10 +36,10 @@ function RegistrationRow({ registration }: { registration: Registration }) {
 
   const approve = useMutation({
     mutationFn: async () => {
-      const { response, error } = await api.POST(
-        '/api/v1/team/registrations/{user_id}/approve',
-        { params: { path: { user_id: registration.id } }, body: { role } },
-      );
+      const { response, error } = await api.POST('/api/v1/team/registrations/{user_id}/approve', {
+        params: { path: { user_id: registration.id } },
+        body: { role },
+      });
       if (!response.ok) unwrap({ error, response });
     },
     onSuccess: () => {

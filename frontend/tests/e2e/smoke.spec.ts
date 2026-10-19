@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 
 import { samplePath } from '../../src/app/route-spec';
 import { ALL_ROUTE_SPECS } from '../../src/app/routes';
@@ -443,7 +443,9 @@ test.describe('onboarding', () => {
     await expect(research.getByRole('button', { name: 'Mark completed' })).toHaveCount(0);
     await expect(research.getByText(/can't be marked completed directly/)).toBeVisible();
     await research.getByRole('button', { name: 'Close' }).click();
-    await expect(board.getByRole('region', { name: 'In progress' }).getByRole('button')).toHaveCount(1);
+    await expect(
+      board.getByRole('region', { name: 'In progress' }).getByRole('button'),
+    ).toHaveCount(1);
 
     // A task without review: create, start, complete.
     await page.getByRole('button', { name: 'New task' }).click();
@@ -497,17 +499,117 @@ test.describe('onboarding', () => {
 
     await page.goto('/approvals');
     const requests = page.getByTestId('approvals-all');
-    await expect(requests.getByRole('row').filter({ hasText: 'Technical fixes roadmap' })).toHaveCount(2);
+    await expect(
+      requests.getByRole('row').filter({ hasText: 'Technical fixes roadmap' }),
+    ).toHaveCount(2);
     await expect(requests.getByText('Changes requested')).toBeVisible();
 
     // My open work lists the specialist's queue on /tasks; the project is listed.
     await page.goto('/tasks?view=all');
-    await expect(page.getByTestId('task-table').getByText('Baseline SEO audit').first()).toBeVisible();
+    await expect(
+      page.getByTestId('task-table').getByText('Baseline SEO audit').first(),
+    ).toBeVisible();
     await page.goto('/projects');
-    await expect(page.getByTestId('projects-table').getByText(`${name} SEO Retainer`)).toBeVisible();
+    await expect(
+      page.getByTestId('projects-table').getByText(`${name} SEO Retainer`),
+    ).toBeVisible();
 
     // Onboarding is now 100%.
     await page.goto(`${clientPath}/onboarding`);
     await expect(onboarding.getByText('100%')).toBeVisible();
   });
 });
+
+test.describe('people (HR phase 1)', () => {
+  test.use({ storageState: AUTH_FILE });
+
+  test('departments, new employees, reporting lines, profile and org chart', async ({ page }) => {
+    test.setTimeout(150_000);
+    const stamp = Date.now();
+    const lead = `Vinay Kumar ${stamp}`;
+    const member = `Jordan Blake ${stamp}`;
+
+    // The six departments exist from the start.
+    await page.goto('/team/teams');
+    const departments = page.getByTestId('departments-table');
+    for (const name of [
+      'SEO Team',
+      'Design Team',
+      'Social Media Team',
+      'Content Writers Team',
+      'Development Team',
+      'Operations Team',
+    ]) {
+      await expect(departments.getByRole('link', { name, exact: true })).toBeVisible();
+    }
+
+    // Create a COO heading the SEO Team, then a specialist reporting to them.
+    await page.goto('/team/employees/new');
+    await page.getByLabel('Full legal name *').fill(lead);
+    await page.getByLabel('Department').selectOption({ label: 'SEO Team' });
+    await page.getByLabel('Designation').selectOption({ label: 'COO' });
+    await page.getByLabel('Employment status').selectOption({ label: 'Active' });
+    await page.getByRole('button', { name: 'Create employee' }).click();
+    await expect(page.getByRole('heading', { level: 1 }).getByText(lead)).toBeVisible();
+    await expect(page.getByText(/^DD-\d{4}/).first()).toBeVisible();
+
+    await page.goto('/team/employees/new');
+    await page.getByLabel('Full legal name *').fill(member);
+    await page.getByLabel('Official e-mail').fill(`jordan-${stamp}@delphin.example`);
+    await page.getByLabel('Department').selectOption({ label: 'SEO Team' });
+    await pickOption(page.getByLabel('Reporting manager'), lead);
+    await page.getByLabel('Work arrangement').selectOption({ label: 'Hybrid' });
+    await page.getByRole('button', { name: 'Create employee' }).click();
+    await expect(page.getByRole('heading', { level: 1 }).getByText(member)).toBeVisible();
+    await expect(page.getByRole('link', { name: lead })).toBeVisible();
+
+    // Employment: leave approver defaults to the manager; a status change is recorded.
+    await page.getByRole('tab', { name: 'Employment' }).click();
+    await expect(page.getByText('(reporting manager)')).toBeVisible();
+    await page.getByRole('button', { name: 'Edit employment' }).click();
+    await page.getByLabel('Employment status').selectOption({ label: 'On probation' });
+    await page.getByRole('button', { name: 'Save employment' }).click();
+    await expect(page.getByText('Employment updated.')).toBeVisible();
+    await page.getByRole('tab', { name: 'Activity' }).click();
+    await expect(page.getByText('Status: Onboarding → On probation')).toBeVisible();
+
+    // Personal details (HR may edit them too).
+    await page.getByRole('tab', { name: 'Personal' }).click();
+    await page.getByRole('button', { name: 'Edit personal details' }).click();
+    await page.getByLabel('Emergency contact').fill('Alex Blake');
+    await page.getByLabel('Emergency phone').fill('+91 98450 11111');
+    await page.getByRole('button', { name: 'Save personal details' }).click();
+    await expect(page.getByText('Alex Blake')).toBeVisible();
+
+    // Make the COO head of the SEO Team.
+    await page.goto('/team/teams');
+    await page.getByRole('button', { name: 'Edit SEO Team' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Edit SEO Team' });
+    await pickOption(dialog.getByLabel('Department head'), lead);
+    await dialog.getByRole('button', { name: 'Save' }).click();
+    const seoRow = departments.getByRole('row').filter({ hasText: 'SEO Team' });
+    await expect(seoRow.getByRole('link', { name: lead })).toBeVisible();
+
+    // Org chart: the specialist sits under the COO.
+    await page.getByRole('tab', { name: 'Org chart' }).click();
+    const chart = page.getByTestId('org-chart');
+    const leadNode = chart
+      .locator('li')
+      .filter({ has: page.getByRole('link', { name: lead, exact: true }) })
+      .first();
+    await expect(leadNode.getByRole('link', { name: member })).toBeVisible();
+
+    // Directory search and department filter.
+    await page.goto('/team/employees');
+    await page.getByLabel('Search').fill(`jordan-${stamp}`);
+    const table = page.getByTestId('employees-table');
+    await expect(table.getByRole('row')).toHaveCount(2); // header + Jordan
+    await expect(table.getByText('On probation')).toBeVisible();
+  });
+});
+
+/** Select the option whose text contains `text` (labels like "Name (DD-0007)"). */
+async function pickOption(select: Locator, text: string) {
+  const value = await select.locator('option', { hasText: text }).first().getAttribute('value');
+  await select.selectOption(value ?? '');
+}

@@ -1,8 +1,8 @@
 # Team: parity checklist
 
-> **Status: not started.** The pilot was not present in `reference/pilot/` when this slot
-> was scaffolded. Every `TODO(pilot-port)` below must be filled **from the pilot source**,
-> never from memory. See [docs/pilot-parity.md](../../../../docs/pilot-parity.md).
+> **Status: sign-up approvals and HR phase 1 (people core) built (2026-10-19) from the HR
+> brief, pending pilot confirmation.** Every `TODO(pilot-port)` below must be filled **from the
+> pilot source**, never from memory. See [docs/pilot-parity.md](../../../../docs/pilot-parity.md).
 
 | | |
 |---|---|
@@ -13,35 +13,44 @@
 
 ## Actions → REST endpoints
 
-| Pilot Server Action | Method | Path | Permission | Status |
-|---|---|---|---|---|
-| TODO(pilot-port): one row per export in `src/app/actions/*` for this domain | | `/api/v1/team…` | | not-started |
-
-## Business rules
-
-- [ ] TODO(pilot-port): list from reference/pilot/nextjs-app/docs/modules.md
-
-Quote each rule from `reference/pilot/nextjs-app/docs/*.md` with a file reference when porting.
-
-## Entities to port (schema.prisma → `models.py` + Alembic revision)
-
-- TODO(pilot-port): models, enums, unique/partial indexes and FKs for this domain
-
-## Pilot tests to port
-
-- TODO(pilot-port): `reference/pilot/nextjs-app/tests/**` cases touching this domain
-
-## Record-level scope
-
-- TODO(pilot-port): scope rules from `src/server/authz/*` → a `Scope` implementation used by every query
-
-## Built ahead of the pilot port: sign-up approvals (2026-10-17)
-
 | Action | Method | Path | Permission | Status |
 |---|---|---|---|---|
-| list pending sign-ups | GET | `/api/v1/team/registrations` | `users.approve` | built |
-| approve with a role | POST | `/api/v1/team/registrations/{id}/approve` | `users.approve` | built |
-| reject (deletes app user + Firebase login) | POST | `/api/v1/team/registrations/{id}/reject` | `users.approve` | built |
+| sign-ups: list / approve / reject | GET/POST | `/api/v1/team/registrations…` | `users.approve` | built |
+| employee directory | GET | `/api/v1/team/employees` | signed in | built |
+| create employee | POST | `/api/v1/team/employees` | `hr.manage` | built |
+| profile | GET | `/api/v1/team/employees/{id}` | signed in (sections by visibility) | built |
+| edit employment / reporting manager | PATCH | `/api/v1/team/employees/{id}` | `hr.manage` | built |
+| edit personal details | PATCH | `/api/v1/team/employees/{id}/personal` | the employee, or `hr.manage` | built |
+| employment history | GET | `/api/v1/team/employees/{id}/history` | employment visibility | built |
+| dotted lines add / end | POST/DELETE | `…/{id}/dotted-lines` | `hr.manage` | built |
+| unlinked accounts | GET | `/api/v1/team/employees/user-options` | `hr.manage` | built |
+| departments list / create / edit (head, deactivate) | GET/POST/PATCH | `/api/v1/team/departments…` | read: signed in; write: `hr.manage` | built |
+| designations list / create / edit | GET/POST/PATCH | `/api/v1/team/designations…` | read: signed in; write: `hr.manage` | built |
+| teams, workload | | `/team/teams/:id`, `/team/workload` | | not-started |
 
-The `/team` page shows a "Pending sign-ups" panel to approvers; the rest of Team & roles (people
-list, capability matrix) is still a placeholder.
+## Business rules (HR brief)
+
+- [x] Six departments exist (migration `0008_people`); only the SEO Team has a head (Vinay Kumar, set by `scripts/seed_hr.py` in development); the others are "To be assigned"
+- [x] Employee IDs DD-0001… from the transactional counter, never reused
+- [x] An employee links to at most one existing sign-in account; accounts are never duplicated
+- [x] One direct manager at a time (history kept as ended reporting lines); no self-reporting, no loops; any number of dotted lines
+- [x] Leave approver is configurable per employee; when unset, the direct manager applies
+- [x] A department with current employees can't be deactivated; inactive departments/designations can't be assigned
+- [x] Exits are refused as a status edit (offboarding arrives in phase 5)
+- [x] Every change audited; employment changes also in the employee's history; personal-detail changes record field names only, never values
+
+## Record-level visibility
+
+- Directory and overview: everyone signed in.
+- Employment section, history: the employee, anyone above them in the direct chain, dotted-line managers, their department head, `hr.view_all`.
+- Personal section: the employee and `hr.personal.view`.
+- New role `hr_admin` (HR / Operations Admin): `hr.manage`, `hr.view_all`, `hr.personal.view`.
+
+## Entities (interim, migration `0008_people`)
+
+- `departments`, `designations`, `employees`, `employee_personal` (1:1, restricted), `reporting_lines` (direct/dotted with dates), `employment_events`
+- TODO(pilot-port): reconcile with schema.prisma
+
+## Next HR phases
+
+2. Onboarding templates, tasks, documents (private storage). 3. Leave. 4. Attendance (daily check-in/out, alternate Saturdays off). 5. Probation, performance, assets & access, offboarding. 6. Announcements & policy acknowledgements, notifications, HR dashboards, reports & exports.

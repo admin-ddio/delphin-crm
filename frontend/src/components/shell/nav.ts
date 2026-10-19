@@ -47,6 +47,14 @@ export const navGroups: NavGroup[] = [
   },
   { label: 'Services', items: [{ label: 'Services & Retainers', href: '/services' }] },
   {
+    // From the HR brief (not in the demo rail).
+    label: 'People',
+    items: [
+      { label: 'Employees', href: '/team/employees' },
+      { label: 'Departments & Org chart', href: '/team/teams' },
+    ],
+  },
+  {
     label: 'Organisation',
     items: [
       {
@@ -72,7 +80,10 @@ export const quickActions: QuickAction[] = [
 ];
 
 /** Groups and items the actor may see; empty groups are dropped. */
-export function visibleNav(permissions: readonly string[], groups: NavGroup[] = navGroups): NavGroup[] {
+export function visibleNav(
+  permissions: readonly string[],
+  groups: NavGroup[] = navGroups,
+): NavGroup[] {
   return groups
     .map((group) => ({
       ...group,
