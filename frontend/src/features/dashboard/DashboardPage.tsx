@@ -1,7 +1,7 @@
 /**
  * /dashboard. Layout and wording from the clickable demo ("Good day, …", stat
  * tiles, panels). Built from the modules that exist so far (clients, onboarding,
- * projects & tasks, sign-ups); the approval, workload and finance tiles arrive
+ * projects, tasks, approvals, sign-ups); the workload and finance tiles arrive
  * with their modules.
  * Every number is counted from the records the signed-in user may see.
  */
@@ -21,6 +21,8 @@ import { ONBOARDING_STATUS } from '@/features/onboarding/OnboardingTab';
 import { useTasks } from '@/features/tasks/api';
 import { TaskDrawer } from '@/features/tasks/TaskDrawer';
 import { TaskTable } from '@/features/tasks/TaskTable';
+import { useApprovals } from '@/features/approvals/api';
+import { ApprovalTable } from '@/features/approvals/ApprovalsPage';
 import { registrationsKey } from '@/features/team/TeamPage';
 import { Progress } from '@/components/ui/Data';
 import { api, unwrap } from '@/lib/api-client';
@@ -169,6 +171,26 @@ function OnboardingPipeline() {
   );
 }
 
+function AwaitingDecision() {
+  const approvals = useApprovals('mine');
+  const [open, setOpen] = useState<string | null>(null);
+  if (!approvals.data?.length) return null;
+  return (
+    <Panel
+      title="Awaiting my decision"
+      flush
+      actions={
+        <Link className="link text-[13px]" to="/approvals">
+          All approvals →
+        </Link>
+      }
+    >
+      <ApprovalTable rows={approvals.data.slice(0, 8)} onOpen={setOpen} />
+      <TaskDrawer taskId={open} onClose={() => setOpen(null)} />
+    </Panel>
+  );
+}
+
 function MyOpenWork({ name }: { name: string }) {
   const tasks = useTasks('mine');
   const [open, setOpen] = useState<string | null>(null);
@@ -241,6 +263,7 @@ export function Component() {
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-4">
         <MyOpenWork name={actor.fullName} />
+        <AwaitingDecision />
         {canSeeClients ? <OnboardingPipeline /> : null}
         {canSeeClients ? <RecentClients canCreate={canCreate} /> : null}
         <Panel title="Quick actions">
@@ -269,6 +292,11 @@ export function Component() {
                 Tasks &amp; work
               </Link>
             </li>
+            <li>
+              <Link className="link" to="/approvals">
+                Approvals
+              </Link>
+            </li>
             {canApprove ? (
               <li>
                 <PendingSignUpsCount />
@@ -284,7 +312,7 @@ export function Component() {
         <Panel title="Coming next">
           <EmptyState
             title="More of the dashboard arrives with each module"
-            description="Approvals, team workload and finance tiles appear as those modules are ported."
+            description="Team workload and finance tiles appear as those modules are ported."
           />
         </Panel>
       </div>

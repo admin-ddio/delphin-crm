@@ -320,11 +320,11 @@ test.describe('clients', () => {
 test.describe('onboarding', () => {
   test.use({ storageState: AUTH_FILE });
 
-  test('all 13 steps through the UI, the public questionnaire and the first project', async ({
+  test('all 13 steps, the public questionnaire, the first project and its reviews', async ({
     page,
     browser,
   }) => {
-    test.setTimeout(240_000);
+    test.setTimeout(300_000);
     const stamp = Date.now();
     const name = `Onboarding Ltd ${stamp}`;
 
@@ -459,9 +459,50 @@ test.describe('onboarding', () => {
     await fix.getByRole('button', { name: 'Close' }).click();
     await expect(page.getByTestId('project-stats').getByText('17%')).toBeVisible(); // 1 of 6
 
+    // Review: submit v1, changes requested (feedback required), v2 approved → completed.
+    await board.getByRole('button', { name: /Keyword research/ }).click();
+    await research.getByRole('button', { name: 'Submit for review' }).click();
+    await research.getByLabel('What changed / notes for the reviewer').fill('First keyword list');
+    await research.getByLabel('Link to the work').fill('https://docs.example.com/keywords');
+    await research.getByRole('button', { name: 'Submit v1' }).click();
+    await expect(research.getByText('Awaiting internal review · v1')).toBeVisible();
+    await research.getByRole('button', { name: 'Request changes' }).click();
+    await expect(page.getByText('Add feedback explaining the requested changes.')).toBeVisible();
+    await research.getByLabel(/^Feedback/).fill('Add search volumes');
+    await research.getByRole('button', { name: 'Request changes' }).click();
+    await expect(research.getByText('In progress', { exact: true })).toBeVisible();
+    await expect(research.getByText('Add search volumes')).toBeVisible();
+    await research.getByRole('button', { name: 'Submit for review' }).click();
+    await research.getByLabel('What changed / notes for the reviewer').fill('Volumes added');
+    await research.getByRole('button', { name: 'Submit v2' }).click();
+    await research.getByRole('button', { name: 'Approve' }).click();
+    await expect(research.getByText('Completed', { exact: true }).first()).toBeVisible();
+    await research.getByRole('button', { name: 'Close' }).click();
+
+    // A task that also needs the client: internal approval, then the client's decision.
+    await board.getByRole('button', { name: /Technical fixes roadmap/ }).click();
+    const roadmap = page.getByRole('dialog', { name: 'Technical fixes roadmap' });
+    await roadmap.getByRole('button', { name: 'Start work' }).click();
+    await roadmap.getByRole('button', { name: 'Submit for review' }).click();
+    await roadmap.getByLabel('What changed / notes for the reviewer').fill('Roadmap draft');
+    await roadmap.getByRole('button', { name: 'Submit v1' }).click();
+    await roadmap.getByRole('button', { name: 'Approve' }).click();
+    await expect(roadmap.getByText('Awaiting client approval · v1')).toBeVisible();
+    await expect(roadmap.getByLabel('Client decision-maker')).toHaveValue('Pat Buyer');
+    await roadmap.getByLabel('Communicated via').selectOption({ label: 'Call' });
+    await roadmap.getByRole('button', { name: 'Approve' }).click();
+    await expect(roadmap.getByText('Pat Buyer (client, via a call)')).toBeVisible();
+    await roadmap.getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByTestId('project-stats').getByText('50%')).toBeVisible(); // 3 of 6
+
+    await page.goto('/approvals');
+    const requests = page.getByTestId('approvals-all');
+    await expect(requests.getByRole('row').filter({ hasText: 'Technical fixes roadmap' })).toHaveCount(2);
+    await expect(requests.getByText('Changes requested')).toBeVisible();
+
     // My open work lists the specialist's queue on /tasks; the project is listed.
     await page.goto('/tasks?view=all');
-    await expect(page.getByTestId('task-table').getByText('Keyword research').first()).toBeVisible();
+    await expect(page.getByTestId('task-table').getByText('Baseline SEO audit').first()).toBeVisible();
     await page.goto('/projects');
     await expect(page.getByTestId('projects-table').getByText(`${name} SEO Retainer`)).toBeVisible();
 

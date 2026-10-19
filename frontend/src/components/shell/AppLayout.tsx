@@ -9,7 +9,24 @@ import { Navigate, Outlet, useLocation } from 'react-router';
 import { DocumentTitle } from '@/components/shell/DocumentTitle';
 import { Sidebar } from '@/components/shell/Sidebar';
 import { Topbar } from '@/components/shell/Topbar';
+import { useApprovals } from '@/features/approvals/api';
+import { useTasks } from '@/features/tasks/api';
 import { useAuth } from '@/lib/auth-context';
+
+/** The rail with its live counters (my open tasks, requests waiting for my decision). */
+function CountedSidebar(props: { mobileOpen: boolean; onNavigate(): void }) {
+  const tasks = useTasks('mine');
+  const approvals = useApprovals('mine');
+  return (
+    <Sidebar
+      {...props}
+      badgeCounts={{
+        myOpenTasks: tasks.data?.length,
+        myPendingApprovals: approvals.data?.length,
+      }}
+    />
+  );
+}
 
 export function AppLayout() {
   const { status } = useAuth();
@@ -30,7 +47,7 @@ export function AppLayout() {
       >
         Skip to main content
       </a>
-      <Sidebar mobileOpen={mobileOpen} onNavigate={() => setMobileOpen(false)} />
+      <CountedSidebar mobileOpen={mobileOpen} onNavigate={() => setMobileOpen(false)} />
       {mobileOpen ? (
         <button
           type="button"

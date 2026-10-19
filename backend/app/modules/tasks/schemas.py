@@ -55,6 +55,44 @@ class TaskPermissions(BaseModel):
     manage: bool
     #: Statuses this user may move the task to right now.
     next_statuses: list[TaskStatus]
+    #: May submit a new version for review now.
+    submit: bool
+    #: May decide the open approval now.
+    decide: bool
+    #: Why this user can't decide the open approval (e.g. they submitted it).
+    decide_blocked: str | None
+
+
+ApprovalStage = Literal["internal", "client"]
+DecisionResult = Literal["approved", "changes"]
+
+
+class FeedbackOut(BaseModel):
+    stage: ApprovalStage
+    result: DecisionResult
+    #: Reviewer name, or "Name (client, via e-mail)".
+    by: str
+    note: str | None
+    at: datetime
+
+
+class VersionOut(BaseModel):
+    number: int
+    note: str
+    link: str | None
+    submitted_by: UserRef | None
+    submitted_at: datetime
+    feedback: list[FeedbackOut]
+
+
+class OpenApproval(BaseModel):
+    id: uuid.UUID
+    stage: ApprovalStage
+    version: int
+    #: Internal: the reviewer. Client: the client's Account Manager (records the decision).
+    approver: UserRef | None
+    requested_by: UserRef | None
+    created_at: datetime
 
 
 class TaskDetail(TaskItem):
@@ -63,6 +101,10 @@ class TaskDetail(TaskItem):
     created_at: datetime
     completed_at: datetime | None
     permissions: TaskPermissions
+    versions: list[VersionOut]
+    open_approval: OpenApproval | None
+    #: Suggested client decision-maker (the client's primary contact).
+    client_contact: str | None
 
 
 class TaskCreate(BaseModel):
@@ -85,6 +127,7 @@ class TaskUpdate(BaseModel):
         default=None, max_length=4000
     )
     assignee_id: uuid.UUID | None = None
+    reviewer_id: uuid.UUID | None = None
     due_date: date | None = None
 
 

@@ -9,7 +9,8 @@ Who may do what
 
 Rules
 - moves follow TRANSITIONS; review/approval states are entered only through the
-  review workflow (next module), so from there a task can only be cancelled;
+  approvals module (submit / decide), so from there a task can only be cancelled
+  (which cancels the open request);
 - a task that requires review or client approval can't be completed directly;
 - completed tasks are final; cancelled tasks can be reopened to the backlog;
 - every change is audited and appears on the client's activity timeline.
@@ -29,12 +30,17 @@ from app.authz.actor import Actor
 from app.authz.permissions import TASKS_CREATE
 from app.core.clock import Clock
 from app.core.errors import BusinessRuleViolation, Forbidden, NotFound, ValidationFailed
+from app.modules.approvals.models import Approval, TaskVersion
+from app.modules.approvals.repository import ApprovalRepository
+from app.modules.approvals.rules import CHANNEL_LABELS, OpenRequest, decision_block
 from app.modules.clients.models import Client
 from app.modules.projects.models import Project
 from app.modules.projects.repository import ProjectRepository
 from app.modules.tasks.models import CLOSED_STATUSES, TASK_STATUSES, Task
 from app.modules.tasks.repository import TaskRepository, TaskRow
 from app.modules.tasks.schemas import (
+    FeedbackOut,
+    OpenApproval,
     StatusChange,
     TaskCreate,
     TaskDetail,
@@ -43,6 +49,7 @@ from app.modules.tasks.schemas import (
     TaskStatus,
     TaskUpdate,
     UserRef,
+    VersionOut,
 )
 from app.platform.activity.service import ActivityRecorder
 from app.platform.audit.service import AuditWriter
@@ -145,6 +152,7 @@ class TaskService:
         self._session = session
         self._repo = TaskRepository(session)
         self._projects = ProjectRepository(session)
+        self._approvals = ApprovalRepository(session)
         self._clock = clock
         self._audit = AuditWriter(session)
         self._activity = ActivityRecorder(session)
@@ -152,15 +160,18 @@ class TaskService:
     # ------------------------------------------------------------ reads
 
     async def list_tasks(
-        self, actor: Actor, *, view: Literal["mine", "all"], open_only: bool
+        self, actor: Actor, *, view: Literal["mine", "review", "all"], open_only: bool
     ) -> list[TaskItem]:
         assignee = actor.user_id if view == "mine" else None
-        rows = await self._repo.list_tasks(actor, assignee=assignee, open_only=open_only)
+        reviewer = actor.user_id if view == "review" else None
+        rows = await self._repo.list_tasks(
+            actor, assignee=assignee, reviewer=reviewer, open_only=open_only
+        )
         today = self._today()
         return [task_item(row, today) for row in rows]
 
     async def get(self, actor: Actor, task_id: uuid.UUID) -> TaskDetail:
-        return self._detail(actor, await self._visible(actor, task_id))
+        return await self._detail(actor, await self._visible(actor, task_id))
 
     async def assignee_options(self) -> list[UserRef]:
         return [
@@ -217,6 +228,10 @@ class TaskService:
             raise ValidationFailed("The task title can't be empty.")
         if incoming.get("assignee_id") is not None:
             await self._assignee(incoming["assignee_id"])
+        if "reviewer_id" in incoming:
+            if incoming["reviewer_id"] is None:
+                raise ValidationFailed("A task must have a reviewer.")
+            await self._assignee(incoming["reviewer_id"])
 
         changes: dict[str, Any] = {}
         for field, new in incoming.items():
@@ -225,9 +240,14 @@ class TaskService:
                 changes[field] = [_jsonable(old), _jsonable(new)]
                 setattr(task, field, new)
         if not changes:
-            return self._detail(actor, row)
+            return await self._detail(actor, row)
         if "assignee_id" in changes and task.status == "backlog" and task.assignee_id:
             task.status = "ready"
+        if "reviewer_id" in changes:
+            # An open internal review moves to the new reviewer.
+            request = await self._approvals.open_for_task(task.id, lock=True)
+            if request is not None and request.stage == "internal":
+                request.approver_id = task.reviewer_id
         await self._repo.flush()
         await self._log(
             actor,
@@ -259,6 +279,8 @@ class TaskService:
             raise Forbidden("Only the project manager or a team lead can cancel or reopen tasks.")
 
         previous = task.status
+        if target == "cancelled":
+            await self._approvals.cancel_open(task.id)
         task.status = target
         task.completed_at = self._clock.now() if target == "completed" else None
         await self._repo.flush()
@@ -291,9 +313,20 @@ class TaskService:
             raise ValidationFailed("Choose an active team member to assign.")
         return user
 
-    def _detail(self, actor: Actor, row: TaskRow) -> TaskDetail:
-        task, project, _, _, reviewer = row
+    async def _detail(self, actor: Actor, row: TaskRow) -> TaskDetail:
+        task, project, client, _, reviewer = row
         item = task_item(row, self._today())
+        versions = await self._approvals.versions(task.id)
+        requests = await self._approvals.approvals(task.id)
+        users = await self._approvals.users(
+            [v.submitted_by_id for v in versions]
+            + [a.decided_by_id for a in requests]
+            + [a.approver_id for a in requests]
+            + [a.requested_by_id for a in requests]
+            + [client.account_manager_id]
+        )
+        pending = next((a for a in requests if a.status == "submitted"), None)
+        blocked = decision_block(actor, self._open_request(pending, client)) if pending else None
         return TaskDetail(
             **item.model_dump(),
             description=task.description,
@@ -304,7 +337,47 @@ class TaskService:
                 work=can_work(actor, task, project),
                 manage=can_manage(actor, project),
                 next_statuses=next_statuses(actor, task, project),
+                submit=can_work(actor, task, project)
+                and task.status == "in_progress"
+                and needs_review(task)
+                and pending is None,
+                decide=pending is not None and blocked is None,
+                decide_blocked=blocked,
             ),
+            versions=[_version_out(v, requests, users) for v in versions],
+            open_approval=self._open_out(pending, versions, client, users) if pending else None,
+            client_contact=client.contact_name,
+        )
+
+    @staticmethod
+    def _open_request(request: Approval, client: Client) -> OpenRequest:
+        return OpenRequest(
+            stage=request.stage,
+            approver_id=request.approver_id,
+            requested_by_id=request.requested_by_id,
+            client_manager_id=client.account_manager_id,
+        )
+
+    @staticmethod
+    def _open_out(
+        request: Approval,
+        versions: list[TaskVersion],
+        client: Client,
+        users: dict[uuid.UUID, User],
+    ) -> OpenApproval:
+        version = next(v.number for v in versions if v.id == request.version_id)
+        approver_id = (
+            request.approver_id if request.stage == "internal" else client.account_manager_id
+        )
+        return OpenApproval(
+            id=request.id,
+            stage=request.stage,  # type: ignore[arg-type]  # DB check constraint
+            version=version,
+            approver=_ref(users.get(approver_id) if approver_id else None),
+            requested_by=_ref(
+                users.get(request.requested_by_id) if request.requested_by_id else None
+            ),
+            created_at=request.created_at,
         )
 
     async def _log(
@@ -332,6 +405,42 @@ class TaskService:
             actor_user_id=actor.user_id,
             summary=summary,
         )
+
+
+def feedback_author(request: Approval, users: dict[uuid.UUID, User]) -> str:
+    if request.stage == "client":
+        channel = CHANNEL_LABELS.get(request.client_channel or "", request.client_channel or "")
+        return f"{request.client_decider} (client, via {channel})"
+    decider = users.get(request.decided_by_id) if request.decided_by_id else None
+    return decider.full_name if decider else "Unknown"
+
+
+def _version_out(
+    version: TaskVersion, requests: list[Approval], users: dict[uuid.UUID, User]
+) -> VersionOut:
+    decided = [
+        r
+        for r in requests
+        if r.version_id == version.id and r.status in ("approved", "changes") and r.decided_at
+    ]
+    submitter = users.get(version.submitted_by_id) if version.submitted_by_id else None
+    return VersionOut(
+        number=version.number,
+        note=version.note,
+        link=version.link,
+        submitted_by=_ref(submitter),
+        submitted_at=version.submitted_at,
+        feedback=[
+            FeedbackOut(
+                stage=r.stage,  # type: ignore[arg-type]  # DB check constraint
+                result=r.status,  # type: ignore[arg-type]
+                by=feedback_author(r, users),
+                note=r.decision_note,
+                at=r.decided_at,  # type: ignore[arg-type]  # filtered above
+            )
+            for r in decided
+        ],
+    )
 
 
 def _jsonable(value: object) -> object:

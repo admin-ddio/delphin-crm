@@ -4,6 +4,83 @@
  */
 
 export interface paths {
+    "/api/v1/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Approvals
+         * @description `mine`: open requests waiting for my decision. `all`: every visible request, newest first.
+         */
+        get: operations["approvals_list_approvals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit For Review
+         * @description Submit a new version of an in-progress task for internal review or client approval.
+         */
+        post: operations["approvals_submit_for_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{approval_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Approval */
+        get: operations["approvals_get_approval"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{approval_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide
+         * @description Approve or request changes. Client-stage decisions record who decided and how.
+         */
+        post: operations["approvals_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/csrf": {
         parameters: {
             query?: never;
@@ -658,7 +735,7 @@ export interface paths {
         };
         /**
          * List Tasks
-         * @description Tasks assigned to me (default) or every visible task; soonest due first.
+         * @description Assigned to me (default), awaiting my internal review, or every visible task.
          */
         get: operations["tasks_list_tasks"];
         put?: never;
@@ -868,6 +945,51 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** ApprovalItem */
+        ApprovalItem: {
+            approver: components["schemas"]["UserRef"] | null;
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /** Client Name */
+            client_name: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            requested_by: components["schemas"]["UserRef"] | null;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "internal" | "client";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "submitted" | "approved" | "changes" | "cancelled";
+            /** Task Code */
+            task_code: string;
+            /**
+             * Task Id
+             * Format: uuid
+             */
+            task_id: string;
+            /** Task Title */
+            task_title: string;
+            /** Version */
+            version: number;
+        };
         /** ApproveRegistrationRequest */
         ApproveRegistrationRequest: {
             /** Role */
@@ -1056,6 +1178,20 @@ export interface components {
             /** Roles */
             roles: string[];
         };
+        /** DecisionIn */
+        DecisionIn: {
+            /** Client Channel */
+            client_channel?: ("email" | "call" | "meeting" | "whatsapp") | null;
+            /** Client Decider */
+            client_decider?: string | null;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approved" | "changes";
+            /** Note */
+            note?: string | null;
+        };
         /** EligibleClient */
         EligibleClient: {
             /** Code */
@@ -1089,6 +1225,28 @@ export interface components {
          */
         ErrorEnvelope: {
             error: components["schemas"]["ErrorBody"];
+        };
+        /** FeedbackOut */
+        FeedbackOut: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** By */
+            by: string;
+            /** Note */
+            note: string | null;
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "approved" | "changes";
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "internal" | "client";
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1224,6 +1382,28 @@ export interface components {
             steps: components["schemas"]["StepOut"][];
             /** Team */
             team: components["schemas"]["UserRef"][];
+        };
+        /** OpenApproval */
+        OpenApproval: {
+            approver: components["schemas"]["UserRef"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            requested_by: components["schemas"]["UserRef"] | null;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "internal" | "client";
+            /** Version */
+            version: number;
         };
         /** Page[ClientListItem] */
         Page_ClientListItem_: {
@@ -1440,6 +1620,18 @@ export interface components {
              */
             state: "todo" | "progress" | "done" | "blocked";
         };
+        /** SubmitIn */
+        SubmitIn: {
+            /** Link */
+            link?: string | null;
+            /** Note */
+            note?: string | null;
+            /**
+             * Task Id
+             * Format: uuid
+             */
+            task_id: string;
+        };
         /** TaskCreate */
         TaskCreate: {
             /** Assignee Id */
@@ -1469,6 +1661,8 @@ export interface components {
         /** TaskDetail */
         TaskDetail: {
             assignee: components["schemas"]["UserRef"] | null;
+            /** Client Contact */
+            client_contact: string | null;
             /**
              * Client Id
              * Format: uuid
@@ -1496,6 +1690,7 @@ export interface components {
             id: string;
             /** Number */
             number: number;
+            open_approval: components["schemas"]["OpenApproval"] | null;
             /** Overdue */
             overdue: boolean;
             permissions: components["schemas"]["TaskPermissions"];
@@ -1520,6 +1715,8 @@ export interface components {
             status_label: string;
             /** Title */
             title: string;
+            /** Versions */
+            versions: components["schemas"]["VersionOut"][];
         };
         /** TaskItem */
         TaskItem: {
@@ -1567,10 +1764,16 @@ export interface components {
         };
         /** TaskPermissions */
         TaskPermissions: {
+            /** Decide */
+            decide: boolean;
+            /** Decide Blocked */
+            decide_blocked: string | null;
             /** Manage */
             manage: boolean;
             /** Next Statuses */
             next_statuses: ("backlog" | "ready" | "in_progress" | "blocked" | "internal_review" | "client_approval" | "completed" | "cancelled")[];
+            /** Submit */
+            submit: boolean;
             /** Work */
             work: boolean;
         };
@@ -1582,6 +1785,8 @@ export interface components {
             description?: string | null;
             /** Due Date */
             due_date?: string | null;
+            /** Reviewer Id */
+            reviewer_id?: string | null;
             /** Title */
             title?: string | null;
         };
@@ -1616,6 +1821,23 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /** VersionOut */
+        VersionOut: {
+            /** Feedback */
+            feedback: components["schemas"]["FeedbackOut"][];
+            /** Link */
+            link: string | null;
+            /** Note */
+            note: string;
+            /** Number */
+            number: number;
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+            submitted_by: components["schemas"]["UserRef"] | null;
+        };
     };
     responses: never;
     parameters: never;
@@ -1625,6 +1847,235 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    approvals_list_approvals: {
+        parameters: {
+            query?: {
+                view?: "mine" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalItem"][];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approvals_submit_for_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    approvals_get_approval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalItem"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    approvals_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     auth_issue_csrf_token: {
         parameters: {
             query?: never;
@@ -3709,7 +4160,7 @@ export interface operations {
     tasks_list_tasks: {
         parameters: {
             query?: {
-                view?: "mine" | "all";
+                view?: "mine" | "review" | "all";
                 open_only?: boolean;
             };
             header?: never;

@@ -49,10 +49,10 @@ Service = Annotated[TaskService, Depends(get_task_service)]
 async def list_tasks(
     actor: CurrentActor,
     service: Service,
-    view: Annotated[Literal["mine", "all"], Query()] = "mine",
+    view: Annotated[Literal["mine", "review", "all"], Query()] = "mine",
     open_only: Annotated[bool, Query()] = True,
 ) -> list[TaskItem]:
-    """Tasks assigned to me (default) or every visible task; soonest due first."""
+    """Assigned to me (default), awaiting my internal review, or every visible task."""
     return await service.list_tasks(actor, view=view, open_only=open_only)
 
 

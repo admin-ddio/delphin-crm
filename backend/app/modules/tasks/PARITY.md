@@ -1,7 +1,7 @@
 # Tasks: parity checklist
 
-> **Status: basics built (2026-10-19) from the clickable demo, pending pilot confirmation.** Review
-> submission, versions and approvals arrive with the approvals module. Every `TODO(pilot-port)` below
+> **Status: built (2026-10-19) from the clickable demo, pending pilot confirmation.** Review
+> submission, versions and decisions live in the approvals module. Every `TODO(pilot-port)` below
 > must be filled **from the pilot source**, never from memory. See [docs/pilot-parity.md](../../../../docs/pilot-parity.md).
 
 | | |
@@ -15,13 +15,13 @@
 
 | Pilot Server Action | Method | Path | Permission | Status |
 |---|---|---|---|---|
-| list (`view=mine\|all`, `open_only`) | GET | `/api/v1/tasks` | project scope | built |
+| list (`view=mine\|review\|all`, `open_only`) | GET | `/api/v1/tasks` | project scope | built |
 | create | POST | `/api/v1/tasks` | `tasks.create` + project scope | built |
 | assignee options | GET | `/api/v1/tasks/assignee-options` | `tasks.create` | built |
 | detail (+ permissions, next statuses) | GET | `/api/v1/tasks/{id}` | project scope | built |
 | edit title / description / assignee / due | PATCH | `/api/v1/tasks/{id}` | task manager | built |
 | move on the board | POST | `/api/v1/tasks/{id}/status` | assignee or task manager | built |
-| submit for review, versions, decisions | | | | next module |
+| submit for review, versions, decisions | | `/api/v1/approvals…` | see approvals | built |
 | TODO(pilot-port): compare with `src/app/actions/*` task exports | | | | |
 
 ## Business rules

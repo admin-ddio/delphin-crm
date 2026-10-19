@@ -1,7 +1,7 @@
 /**
  * Task drawer and New task drawer (layout and wording from the clickable demo).
  * Buttons come from the server's permissions.next_statuses, so the UI never offers
- * a move the API would refuse. Review submission arrives with the approvals module.
+ * a move the API would refuse. Review submission and decisions live in ReviewPanel.
  */
 import { useEffect, useId, useState, type FormEvent } from 'react';
 
@@ -21,6 +21,7 @@ import {
   type TaskDetail,
   type TaskStatus,
 } from '@/features/tasks/api';
+import { ReviewPanel } from '@/features/approvals/ReviewPanel';
 import { ApiError } from '@/lib/api-client';
 import { formatDate } from '@/lib/format';
 
@@ -61,18 +62,28 @@ function ManageForm({ task }: { task: TaskDetail }) {
   const { toast } = useToast();
   const assigneeId = useId();
   const dueId = useId();
+  const reviewerId = useId();
   const [assignee, setAssignee] = useState(task.assignee?.id ?? '');
+  const [reviewer, setReviewer] = useState(task.reviewer?.id ?? '');
   const [due, setDue] = useState(task.due_date ?? '');
   useEffect(() => {
     setAssignee(task.assignee?.id ?? '');
+    setReviewer(task.reviewer?.id ?? '');
     setDue(task.due_date ?? '');
-  }, [task.assignee?.id, task.due_date]);
+  }, [task.assignee?.id, task.reviewer?.id, task.due_date]);
 
-  const dirty = assignee !== (task.assignee?.id ?? '') || due !== (task.due_date ?? '');
+  const dirty =
+    assignee !== (task.assignee?.id ?? '') ||
+    reviewer !== (task.reviewer?.id ?? '') ||
+    due !== (task.due_date ?? '');
   async function save(event: FormEvent) {
     event.preventDefault();
     try {
-      await update.mutateAsync({ assignee_id: assignee || null, due_date: due || null });
+      await update.mutateAsync({
+        assignee_id: assignee || null,
+        due_date: due || null,
+        ...(reviewer && reviewer !== task.reviewer?.id ? { reviewer_id: reviewer } : {}),
+      });
       toast({ title: 'Task updated.' });
     } catch (error) {
       toast({ title: errorMessage(error), tone: 'error' });
@@ -89,6 +100,21 @@ function ManageForm({ task }: { task: TaskDetail }) {
           onChange={(e) => setAssignee(e.target.value)}
         >
           <option value="">Unassigned</option>
+          {assignees.data?.map((person) => (
+            <option key={person.id} value={person.id}>
+              {person.full_name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="label">
+        <label htmlFor={reviewerId}>Reviewer</label>
+        <select
+          id={reviewerId}
+          className="input"
+          value={reviewer}
+          onChange={(e) => setReviewer(e.target.value)}
+        >
           {assignees.data?.map((person) => (
             <option key={person.id} value={person.id}>
               {person.full_name}
@@ -119,10 +145,7 @@ export function TaskBody({ task }: { task: TaskDetail }) {
   const { toast } = useToast();
   const { next_statuses: next, work, manage } = task.permissions;
   const closed = task.status === 'completed' || task.status === 'cancelled';
-  const waitingForReview =
-    work &&
-    task.status === 'in_progress' &&
-    (task.requires_review || task.requires_client_approval);
+  const waitingForReview = task.permissions.submit;
 
   async function go(to: TaskStatus) {
     try {
@@ -181,14 +204,11 @@ export function TaskBody({ task }: { task: TaskDetail }) {
       ) : null}
       {waitingForReview ? (
         <p className="text-[13px] text-muted">
-          This task requires review, so it can't be marked completed directly. Submitting it for
-          review arrives with the Approvals module.
+          This task requires review, so it can't be marked completed directly. Submit it for review
+          instead.
         </p>
       ) : null}
-      <div>
-        <h3 className="mb-1 text-sm font-semibold">Versions &amp; feedback</h3>
-        <p className="text-muted">Nothing submitted yet.</p>
-      </div>
+      <ReviewPanel task={task} />
     </>
   );
 }

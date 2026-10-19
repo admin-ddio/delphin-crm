@@ -44,9 +44,18 @@ class TaskRepository:
         return [(t, p, c, a, r) for t, p, c, a, r in rows.all()]
 
     async def list_tasks(
-        self, actor: Actor, *, assignee: uuid.UUID | None, open_only: bool, limit: int = 200
+        self,
+        actor: Actor,
+        *,
+        assignee: uuid.UUID | None,
+        open_only: bool,
+        reviewer: uuid.UUID | None = None,
+        limit: int = 200,
     ) -> list[TaskRow]:
         filters: list[ColumnElement[bool]] = []
+        if reviewer is not None:
+            filters.append(Task.reviewer_id == reviewer)
+            filters.append(Task.status == "internal_review")
         if assignee is not None:
             filters.append(Task.assignee_id == assignee)
         if open_only:

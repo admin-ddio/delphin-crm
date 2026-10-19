@@ -175,7 +175,9 @@ async def test_task_board_moves_and_rules(world: World) -> None:
     mine = (await world.http.get("/api/v1/tasks")).json()
     assert [t["id"] for t in mine] == [tid]
     me = (await world.http.get(f"/api/v1/tasks/{tid}")).json()["permissions"]
-    assert me == {"work": True, "manage": False, "next_statuses": ["backlog", "in_progress"]}
+    assert me["work"] is True
+    assert me["manage"] is False
+    assert me["next_statuses"] == ["backlog", "in_progress"]
     cancel = await move(world, tid, "cancelled")
     assert cancel.status_code == 403
     assert (await move(world, tid, "in_progress")).json()["status"] == "in_progress"

@@ -11,7 +11,7 @@ export type TaskDetail = components['schemas']['TaskDetail'];
 export type TaskStatus = TaskItem['status'];
 export type TaskCreate = components['schemas']['TaskCreate'];
 export type TaskUpdate = components['schemas']['TaskUpdate'];
-export type TaskView = 'mine' | 'all';
+export type TaskView = 'mine' | 'review' | 'all';
 
 export const tasksKeys = {
   all: ['tasks'] as const,
