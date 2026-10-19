@@ -32,9 +32,20 @@ test.describe('signed-in pages', () => {
     });
   }
 
+  test('dashboard greets the user and counts clients', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', { level: 1, name: 'Good day, E2E' })).toBeVisible();
+    const tiles = page.getByTestId('dashboard-tiles');
+    await expect(tiles.getByText('Active clients')).toBeVisible();
+    await expect(tiles.getByText(/^\d+$/).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Create a client' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Review sign-ups/ })).toBeVisible();
+  });
+
   test('the app reaches the API and receives a CSRF cookie', async ({ page, context }) => {
     await page.goto('/dashboard');
-    await expect(page.getByTestId('api-status')).toHaveText('API connected');
+    // The dashboard fires several requests at once; under parallel load this can take a while.
+    await expect(page.getByTestId('api-status')).toHaveText('API connected', { timeout: 15_000 });
     const cookies = await context.cookies();
     expect(cookies.map((cookie) => cookie.name)).toContain('delphin_csrf');
   });

@@ -89,7 +89,7 @@ describe('app shell', () => {
 
   it('redirects / to the dashboard', async () => {
     renderAt('/');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Good day, Ada' })).toBeInTheDocument();
   });
 
   it('shows not found for unknown paths', async () => {
