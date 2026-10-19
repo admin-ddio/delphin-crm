@@ -73,7 +73,7 @@ describe('primitives', () => {
 describe('app shell', () => {
   it('renders a placeholder route inside the shell', async () => {
     renderAt('/clients');
-    expect(await screen.findByRole('heading', { level: 1, name: 'CRM & Clients' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Client List' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Skip to main content' })).toHaveAttribute('href', '#main');
     const nav = screen.getByRole('navigation', { name: 'Main' });
     expect(within(nav).getByRole('link', { name: 'CRM & Clients' })).toHaveAttribute(

@@ -40,7 +40,8 @@ trap cleanup EXIT
 
 echo "e2e: starting a fresh isolated stack '$PROJECT' on http://localhost:$PORT"
 compose --profile e2e down -v --remove-orphans >/dev/null 2>&1 || true
-compose up -d --wait db migrate firebase backend frontend
+# --build: dependency changes (package.json / uv.lock) must reach the throw-away images.
+compose up -d --build --wait db migrate firebase backend frontend
 
 echo "e2e: warming up the dev server (compiling every page once)"
 # A brand-new Vite server compiles each module on first request; doing that here

@@ -1158,6 +1158,7 @@ class OnboardingService:
             completed_at=state.completed_at,
             locked_reason=locked,
             permissions=Permissions(
+                owner=can_manage,
                 manage=can_manage and open_,
                 verify_access=actor.can(ONBOARDING_ACCESS_VERIFY) and open_,
                 confirm_kpis=actor.can(ONBOARDING_KPI_CONFIRM) and open_,

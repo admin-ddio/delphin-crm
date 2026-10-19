@@ -6,7 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Link } from '@/components/ui/Link';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useOnboardingBoard } from '@/features/onboarding/api';
-import { ONBOARDING_STATUS } from '@/features/onboarding/OnboardingTab';
+import { ONBOARDING_STATUS } from '@/features/onboarding/api';
 
 export function Component() {
   const board = useOnboardingBoard();
@@ -18,7 +18,12 @@ export function Component() {
       />
       <Panel flush>
         {board.isPending ? <EmptyState title="Loading…" /> : null}
-        {board.isError ? <EmptyState title="Couldn't load onboarding" description="Reload the page to try again." /> : null}
+        {board.isError ? (
+          <EmptyState
+            title="Couldn't load onboarding"
+            description="Reload the page to try again."
+          />
+        ) : null}
         {board.data?.length === 0 ? (
           <EmptyState title="No onboardings" description="Create a client to start one." />
         ) : null}
@@ -40,7 +45,7 @@ export function Component() {
                   return (
                     <tr key={row.client_id}>
                       <td>
-                        <Link className="link" to={`/clients/${row.client_id}/onboarding`}>
+                        <Link className="link" to={`/clients/${row.client_id}`}>
                           {row.client_name}
                         </Link>
                         <div className="code">{row.client_code}</div>
@@ -49,11 +54,16 @@ export function Component() {
                         <Badge tone={status.tone}>{status.label}</Badge>
                       </td>
                       <td className="w-[200px]">
-                        <Progress value={row.progress} label={`${row.client_name} onboarding progress`} />
+                        <Progress
+                          value={row.progress}
+                          label={`${row.client_name} onboarding progress`}
+                        />
                       </td>
                       <td>
                         {row.current_step ?? 'Done'}
-                        {row.current_detail ? <div className="code">{row.current_detail}</div> : null}
+                        {row.current_detail ? (
+                          <div className="code">{row.current_detail}</div>
+                        ) : null}
                       </td>
                       <td>{row.account_manager.full_name}</td>
                     </tr>

@@ -2,12 +2,16 @@ import type { RouteSpec } from '@/app/route-spec';
 
 /** Pilot routes owned by the clients module. Titles are provisional (see RouteSpec.title). */
 export const clientsRouteSpecs: readonly RouteSpec[] = [
-  { path: '/clients', title: 'CRM & Clients', module: 'clients', layout: 'app', screenshots: ['02-clients.png'], titleSource: 'demo', ported: true },
-  { path: '/clients/new', title: 'New client', module: 'clients', layout: 'app', titleSource: 'demo', ported: true },
+  { path: '/clients', title: 'Client List', module: 'clients', layout: 'app', screenshots: ['02-clients.png'], titleSource: 'demo', ported: true },
+  { path: '/clients/new', title: 'Create New Client', module: 'clients', layout: 'app', titleSource: 'demo', ported: true },
   { path: '/clients/:id', title: 'Client overview', module: 'clients', layout: 'app', screenshots: ['03-client-overview.png'], ported: true },
   { path: '/clients/:id/edit', title: 'Edit client', module: 'clients', layout: 'app', ported: true },
   { path: '/clients/:id/contacts', title: 'Contacts', module: 'clients', layout: 'app', ported: true },
   { path: '/clients/:id/onboarding', title: 'Onboarding', module: 'clients', layout: 'app', screenshots: ['04-onboarding-summary.png', '05-onboarding-access.png', '06-onboarding-kpis.png', '07-onboarding-review.png'], ported: true },
+  { path: '/clients/:id/questionnaire', title: 'Client questionnaire', module: 'clients', layout: 'app', ported: true },
+  { path: '/clients/:id/access', title: 'Access checklist', module: 'clients', layout: 'app', ported: true },
+  { path: '/clients/:id/team', title: 'Internal team', module: 'clients', layout: 'app', ported: true },
+  { path: '/clients/:id/summary', title: 'Onboarding summary', module: 'clients', layout: 'app', ported: true },
   { path: '/clients/:id/projects', title: 'Projects', module: 'clients', layout: 'app', ported: true },
   { path: '/clients/:id/tasks', title: 'Tasks', module: 'clients', layout: 'app', ported: true },
   { path: '/clients/:id/services', title: 'Services', module: 'clients', layout: 'app', ported: true },

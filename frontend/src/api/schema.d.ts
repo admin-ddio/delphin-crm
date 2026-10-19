@@ -236,6 +236,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/clients/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Status Counts
+         * @description Visible clients per status (list tabs).
+         */
+        get: operations["clients_status_counts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/clients/{client_id}": {
         parameters: {
             query?: never;
@@ -277,6 +297,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/clients/{client_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Status
+         * @description Put on hold, mark completed, or reactivate (the client's Account Manager).
+         */
+        post: operations["clients_change_status"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/clients/{client_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Client Documents
+         * @description Folders (with counts), every document, and what the actor may do.
+         */
+        get: operations["documents_client_documents"];
+        put?: never;
+        /**
+         * Upload Document
+         * @description Multipart upload (≤ MAX_UPLOAD_BYTES). Pick the folder by id or by name.
+         */
+        post: operations["documents_upload_document"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/clients/{client_id}/folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Folder */
+        post: operations["documents_create_folder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/documents/folders/{folder_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Folder */
+        delete: operations["documents_delete_folder"];
+        options?: never;
+        head?: never;
+        /** Rename Folder */
+        patch: operations["documents_rename_folder"];
+        trace?: never;
+    };
+    "/api/v1/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Document */
+        delete: operations["documents_delete_document"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Document
+         * @description Move to another folder or change the description.
+         */
+        patch: operations["documents_update_document"];
+        trace?: never;
+    };
     "/api/v1/files/{file_id}": {
         parameters: {
             query?: never;
@@ -305,6 +425,193 @@ export interface paths {
         put?: never;
         /** Run Due Jobs */
         post: operations["jobs_run_due_jobs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meetings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Schedule Meeting */
+        post: operations["meetings_schedule_meeting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meetings/action-items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Action Item */
+        delete: operations["meetings_delete_action_item"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Action Item
+         * @description The item's owner may tick it off; managers may change anything.
+         */
+        patch: operations["meetings_update_action_item"];
+        trace?: never;
+    };
+    "/api/v1/meetings/clients/{client_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Client Meetings
+         * @description Every meeting for the client (oldest first) with summary counts.
+         */
+        get: operations["meetings_client_meetings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meetings/{meeting_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Meeting */
+        get: operations["meetings_get_meeting"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Meeting
+         * @description Scheduled meetings only. Attendee lists given here replace the current ones.
+         */
+        patch: operations["meetings_update_meeting"];
+        trace?: never;
+    };
+    "/api/v1/meetings/{meeting_id}/action-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Action Item */
+        post: operations["meetings_add_action_item"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meetings/{meeting_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Meeting */
+        post: operations["meetings_cancel_meeting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meetings/{meeting_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Meeting
+         * @description Record the meeting notes and mark it completed.
+         */
+        post: operations["meetings_complete_meeting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Notifications
+         * @description My latest 30 notifications, newest first, with the unread count.
+         */
+        get: operations["notifications_my_notifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark All Read */
+        post: operations["notifications_mark_all_read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Read */
+        post: operations["notifications_mark_read"];
         delete?: never;
         options?: never;
         head?: never;
@@ -348,7 +655,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/onboarding/clients/{client_id}/access/receive-all": {
+    "/api/v1/onboarding/clients/{client_id}/access": {
         parameters: {
             query?: never;
             header?: never;
@@ -357,8 +664,28 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Receive All Access */
-        post: operations["onboarding_receive_all_access"];
+        /** Add Access Item */
+        post: operations["onboarding_add_access_item"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/clients/{client_id}/access/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Access
+         * @description Request every pending item, or mark every pending/requested item received.
+         */
+        post: operations["onboarding_bulk_access"];
         delete?: never;
         options?: never;
         head?: never;
@@ -375,11 +702,32 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete Access Item
+         * @description Custom items only.
+         */
+        delete: operations["onboarding_delete_access_item"];
         options?: never;
         head?: never;
         /** Update Access */
         patch: operations["onboarding_update_access"];
+        trace?: never;
+    };
+    "/api/v1/onboarding/clients/{client_id}/access/{key}/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Access Details */
+        patch: operations["onboarding_update_access_details"];
         trace?: never;
     };
     "/api/v1/onboarding/clients/{client_id}/complete": {
@@ -391,18 +739,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Complete Onboarding
-         * @description Re-checks access, KPI confirmation and steps 1–11; the client becomes Active.
-         */
-        post: operations["onboarding_complete_onboarding"];
+        /** Complete */
+        post: operations["onboarding_complete"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/onboarding/clients/{client_id}/contract": {
+    "/api/v1/onboarding/clients/{client_id}/kpi-notes": {
         parameters: {
             query?: never;
             header?: never;
@@ -410,26 +755,9 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
-        /** Contract */
-        post: operations["onboarding_contract"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/onboarding/clients/{client_id}/kickoffs/{kind}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Kickoff */
-        post: operations["onboarding_kickoff"];
+        /** Kpi Notes */
+        put: operations["onboarding_kpi_notes"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -462,10 +790,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Confirm Kpis
-         * @description Record that the client confirmed every pending KPI target (who, and how).
-         */
+        /** Confirm Kpis */
         post: operations["onboarding_confirm_kpis"];
         delete?: never;
         options?: never;
@@ -487,10 +812,14 @@ export interface paths {
         delete: operations["onboarding_delete_kpi"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Update Kpi
+         * @description Changing a confirmed target clears its confirmation; current values any time.
+         */
+        patch: operations["onboarding_update_kpi"];
         trace?: never;
     };
-    "/api/v1/onboarding/clients/{client_id}/questionnaire/answers": {
+    "/api/v1/onboarding/clients/{client_id}/questionnaire": {
         parameters: {
             query?: never;
             header?: never;
@@ -498,12 +827,12 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
         /**
-         * Record Answers
-         * @description Record the client's answers on their behalf (e.g. collected on a call).
+         * Save Questionnaire Draft
+         * @description Save the answers as a draft (partial answers allowed).
          */
-        post: operations["onboarding_record_answers"];
+        put: operations["onboarding_save_questionnaire_draft"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -521,9 +850,29 @@ export interface paths {
         put?: never;
         /**
          * Send Questionnaire
-         * @description Create a single-use link (30 days) for the client; replaces any earlier link.
+         * @description Create a single-use link (30 days); any earlier link stops working.
          */
         post: operations["onboarding_send_questionnaire"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/clients/{client_id}/questionnaire/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Questionnaire
+         * @description Record the client's answers (every required answer is needed).
+         */
+        post: operations["onboarding_submit_questionnaire"];
         delete?: never;
         options?: never;
         head?: never;
@@ -539,11 +888,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Pass Review
-         * @description Passes only when steps 1–10 are done.
-         */
-        post: operations["onboarding_pass_review"];
+        /** Review */
+        post: operations["onboarding_review"];
         delete?: never;
         options?: never;
         head?: never;
@@ -574,10 +920,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Team Options
-         * @description People who can be added to this client's team.
-         */
+        /** Team Options */
         get: operations["onboarding_team_options"];
         put?: never;
         post?: never;
@@ -601,7 +944,8 @@ export interface paths {
         delete: operations["onboarding_remove_team_member"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update Team Member */
+        patch: operations["onboarding_update_team_member"];
         trace?: never;
     };
     "/api/v1/onboarding/questionnaire/{token}": {
@@ -613,11 +957,18 @@ export interface paths {
         };
         /**
          * Public Questionnaire
-         * @description No sign-in: the single-use link token is the credential.
+         * @description Public: the client opens the link (no sign-in).
          */
         get: operations["onboarding_public_questionnaire"];
-        put?: never;
-        /** Submit Public Questionnaire */
+        /**
+         * Save Public Draft
+         * @description Public: save a draft and come back later with the same link.
+         */
+        put: operations["onboarding_save_public_draft"];
+        /**
+         * Submit Public Questionnaire
+         * @description Public: submit the answers; the link is used up.
+         */
         post: operations["onboarding_submit_public_questionnaire"];
         delete?: never;
         options?: never;
@@ -1119,12 +1470,36 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccessDetails */
+        AccessDetails: {
+            /** Description */
+            description?: string | null;
+            /** Notes */
+            notes?: string | null;
+        };
+        /** AccessItemIn */
+        AccessItemIn: {
+            /** Description */
+            description?: string | null;
+            /** Label */
+            label: string;
+        };
         /** AccessItemOut */
         AccessItemOut: {
+            /** Description */
+            description: string | null;
+            /** Is Custom */
+            is_custom: boolean;
             /** Key */
             key: string;
             /** Label */
             label: string;
+            /** Notes */
+            notes: string | null;
+            /** Received At */
+            received_at: string | null;
+            /** Requested At */
+            requested_at: string | null;
             /**
              * Status
              * @enum {string}
@@ -1133,6 +1508,15 @@ export interface components {
             /** Verified At */
             verified_at: string | null;
             verified_by: components["schemas"]["UserRef"] | null;
+        };
+        /** AccessSummary */
+        AccessSummary: {
+            /** Percent */
+            percent: number;
+            /** Required */
+            required: number;
+            /** Verified */
+            verified: number;
         };
         /** AccessUpdate */
         AccessUpdate: {
@@ -1154,15 +1538,60 @@ export interface components {
              */
             id: string;
         };
+        /** ActionItemIn */
+        ActionItemIn: {
+            /** Due Date */
+            due_date?: string | null;
+            /** Owner Id */
+            owner_id?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** ActionItemOut */
+        ActionItemOut: {
+            /** Done */
+            done: boolean;
+            /** Due Date */
+            due_date: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            owner: components["schemas"]["UserRef"] | null;
+            /** Title */
+            title: string;
+        };
+        /** ActionItemUpdate */
+        ActionItemUpdate: {
+            /** Done */
+            done?: boolean | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Owner Id */
+            owner_id?: string | null;
+            /** Title */
+            title?: string | null;
+        };
+        /** Additional */
+        Additional: {
+            /** Notes */
+            notes?: string | null;
+            /** Products Services */
+            products_services?: string | null;
+        };
+        /** Answers */
+        Answers: {
+            additional?: components["schemas"]["Additional"];
+            brand_voice?: components["schemas"]["BrandVoice"];
+            business_goals?: components["schemas"]["BusinessGoals"];
+            competitors?: components["schemas"]["Competitors"];
+            past_seo?: components["schemas"]["PastSeo"];
+            target_markets?: components["schemas"]["TargetMarkets"];
+        };
         /** AnswersIn */
         AnswersIn: {
-            /**
-             * Answers
-             * @description Question key → answer. Every question needs an answer.
-             */
-            answers: {
-                [key: string]: string;
-            };
+            answers: components["schemas"]["Answers"];
         };
         /** ApprovalItem */
         ApprovalItem: {
@@ -1214,6 +1643,23 @@ export interface components {
             /** Role */
             role: string;
         };
+        /** AttendeeOut */
+        AttendeeOut: {
+            /** Email */
+            email: string | null;
+            /** External */
+            external: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Organisation */
+            organisation: string | null;
+            user: components["schemas"]["UserRef"] | null;
+        };
         /** BoardRow */
         BoardRow: {
             account_manager: components["schemas"]["UserRef"];
@@ -1226,6 +1672,11 @@ export interface components {
             client_id: string;
             /** Client Name */
             client_name: string;
+            /**
+             * Client Status
+             * @enum {string}
+             */
+            client_status: "onboarding" | "active" | "on_hold" | "completed";
             /** Current Detail */
             current_detail: string | null;
             /** Current Step */
@@ -1237,6 +1688,61 @@ export interface components {
              * @enum {string}
              */
             status: "in_progress" | "blocked" | "completed";
+        };
+        /** Body_documents_upload_document */
+        Body_documents_upload_document: {
+            /** Description */
+            description?: string | null;
+            /** File */
+            file: string;
+            /**
+             * Folder
+             * @description Folder name
+             */
+            folder?: string | null;
+            /** Folder Id */
+            folder_id?: string | null;
+        };
+        /** BrandVoice */
+        BrandVoice: {
+            /**
+             * Avoid
+             * @description Words or topics to avoid
+             */
+            avoid?: string | null;
+            /** Guidelines */
+            guidelines?: string | null;
+            /** Tones */
+            tones?: ("professional" | "friendly" | "authoritative" | "conversational" | "technical" | "playful" | "inspirational" | "premium")[];
+        };
+        /** BulkAccess */
+        BulkAccess: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "requested" | "received";
+        };
+        /** BusinessGoals */
+        BusinessGoals: {
+            /** Details */
+            details?: string | null;
+            /** Goals */
+            goals?: ("organic_traffic" | "leads" | "sales" | "brand_awareness" | "reputation" | "keywords" | "new_markets" | "engagement" | "other")[];
+            /** Other */
+            other?: string | null;
+        };
+        /** CancelIn */
+        CancelIn: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /** Choice */
+        Choice: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
         };
         /** ClientActivity */
         ClientActivity: {
@@ -1261,42 +1767,107 @@ export interface components {
              * Format: uuid
              */
             account_manager_id: string;
+            /** Business Type */
+            business_type?: ("b2b" | "b2c" | "b2b_b2c" | "d2c" | "non_profit" | "government") | null;
+            /** Company Size */
+            company_size?: ("1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1000+") | null;
             /**
              * Confirm Different Business
              * @description Override the similar-name warning (never overrides a duplicate domain).
              * @default false
              */
             confirm_different_business: boolean;
-            /** Contact Email */
-            contact_email?: string | null;
+            /** Contact Alt Email */
+            contact_alt_email?: string | null;
+            /** Contact Alt Phone */
+            contact_alt_phone?: string | null;
+            /** Contact Designation */
+            contact_designation: string;
+            /**
+             * Contact Email
+             * Format: email
+             */
+            contact_email: string;
             /** Contact Name */
-            contact_name?: string | null;
+            contact_name: string;
+            /** Contact Phone */
+            contact_phone: string;
+            /**
+             * Contract End
+             * Format: date
+             */
+            contract_end: string;
+            /** Contract Notes */
+            contract_notes?: string | null;
+            /**
+             * Contract Start
+             * Format: date
+             */
+            contract_start: string;
+            /** Contract Value */
+            contract_value?: number | string | null;
+            /**
+             * Country
+             * @description ISO 3166-1 alpha-2
+             * @default IN
+             */
+            country: string;
+            /** Description */
+            description?: string | null;
             /** Industry */
-            industry?: string | null;
+            industry: string;
             /**
              * Name
-             * @description Legal / business name
+             * @description Company name
              */
             name: string;
+            /** Payment Terms */
+            payment_terms?: ("monthly" | "quarterly" | "half_yearly" | "annually" | "one_time" | "milestone") | null;
             /** Website */
             website?: string | null;
         };
         /** ClientDetail */
         ClientDetail: {
             account_manager: components["schemas"]["UserRef"];
+            /** Business Type */
+            business_type: ("b2b" | "b2c" | "b2b_b2c" | "d2c" | "non_profit" | "government") | null;
             /** Can Edit */
             can_edit: boolean;
             /** Code */
             code: string;
+            /** Company Size */
+            company_size: ("1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1000+") | null;
+            /** Contact Alt Email */
+            contact_alt_email: string | null;
+            /** Contact Alt Phone */
+            contact_alt_phone: string | null;
+            /** Contact Designation */
+            contact_designation: string | null;
             /** Contact Email */
             contact_email: string | null;
             /** Contact Name */
             contact_name: string | null;
+            /** Contact Phone */
+            contact_phone: string | null;
+            /** Contract Currency */
+            contract_currency: string;
+            /** Contract End */
+            contract_end: string | null;
+            /** Contract Notes */
+            contract_notes: string | null;
+            /** Contract Start */
+            contract_start: string | null;
+            /** Contract Value */
+            contract_value: string | null;
+            /** Country */
+            country: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Description */
+            description: string | null;
             /** Domain */
             domain: string | null;
             /**
@@ -1306,13 +1877,17 @@ export interface components {
             id: string;
             /** Industry */
             industry: string | null;
+            /** Last Activity At */
+            last_activity_at: string | null;
             /** Name */
             name: string;
+            /** Payment Terms */
+            payment_terms: ("monthly" | "quarterly" | "half_yearly" | "annually" | "one_time" | "milestone") | null;
             /**
              * Status
              * @enum {string}
              */
-            status: "contract_pending" | "onboarding" | "active";
+            status: "onboarding" | "active" | "on_hold" | "completed";
             /** Status Label */
             status_label: string;
             /**
@@ -1322,6 +1897,18 @@ export interface components {
             updated_at: string;
             /** Website */
             website: string | null;
+        };
+        /** ClientDocuments */
+        ClientDocuments: {
+            /** Allowed Extensions */
+            allowed_extensions: string[];
+            /** Documents */
+            documents: components["schemas"]["DocumentOut"][];
+            /** Folders */
+            folders: components["schemas"]["FolderOut"][];
+            /** Max Upload Bytes */
+            max_upload_bytes: number;
+            permissions: components["schemas"]["DocumentPermissions"];
         };
         /** ClientListItem */
         ClientListItem: {
@@ -1340,46 +1927,134 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Industry */
+            industry: string | null;
+            /** Last Activity At */
+            last_activity_at: string | null;
             /** Name */
             name: string;
             /**
              * Status
              * @enum {string}
              */
-            status: "contract_pending" | "onboarding" | "active";
+            status: "onboarding" | "active" | "on_hold" | "completed";
             /** Status Label */
             status_label: string;
+            /** Website */
+            website: string | null;
+        };
+        /** ClientMeetings */
+        ClientMeetings: {
+            /** Can Schedule */
+            can_schedule: boolean;
+            /** Meetings */
+            meetings: components["schemas"]["MeetingOut"][];
+            stats: components["schemas"]["MeetingStats"];
+        };
+        /** ClientSummary */
+        ClientSummary: {
+            account_manager: components["schemas"]["UserRef"];
+            /** Code */
+            code: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "onboarding" | "active" | "on_hold" | "completed";
         };
         /**
          * ClientUpdate
-         * @description PATCH: only fields present are changed.
+         * @description PATCH: only fields present are changed; required fields can't be cleared.
          */
         ClientUpdate: {
             /** Account Manager Id */
             account_manager_id?: string | null;
+            /** Business Type */
+            business_type?: ("b2b" | "b2c" | "b2b_b2c" | "d2c" | "non_profit" | "government") | null;
+            /** Company Size */
+            company_size?: ("1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1000+") | null;
             /**
              * Confirm Different Business
              * @default false
              */
             confirm_different_business: boolean;
+            /** Contact Alt Email */
+            contact_alt_email?: string | null;
+            /** Contact Alt Phone */
+            contact_alt_phone?: string | null;
+            /** Contact Designation */
+            contact_designation?: string | null;
             /** Contact Email */
             contact_email?: string | null;
             /** Contact Name */
             contact_name?: string | null;
+            /** Contact Phone */
+            contact_phone?: string | null;
+            /** Contract End */
+            contract_end?: string | null;
+            /** Contract Notes */
+            contract_notes?: string | null;
+            /** Contract Start */
+            contract_start?: string | null;
+            /** Contract Value */
+            contract_value?: number | string | null;
+            /** Country */
+            country?: string | null;
+            /** Description */
+            description?: string | null;
             /** Industry */
             industry?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Payment Terms */
+            payment_terms?: ("monthly" | "quarterly" | "half_yearly" | "annually" | "one_time" | "milestone") | null;
+            /** Website */
+            website?: string | null;
+        };
+        /** Competitor */
+        Competitor: {
             /** Name */
             name?: string | null;
             /** Website */
             website?: string | null;
         };
-        /** ContractAction */
-        ContractAction: {
+        /** Competitors */
+        Competitors: {
+            /** Competitors */
+            competitors?: components["schemas"]["Competitor"][];
+            /** Notes */
+            notes?: string | null;
+        };
+        /** CompleteIn */
+        CompleteIn: {
+            /** Notes */
+            notes: string;
+        };
+        /** CoverageOut */
+        CoverageOut: {
             /**
-             * Action
+             * Area
              * @enum {string}
              */
-            action: "record" | "sign";
+            area: "account" | "project_management" | "seo" | "content" | "design" | "development" | "social" | "analytics";
+            /** Label */
+            label: string;
+            /** Members */
+            members: components["schemas"]["UserRef"][];
+            /** Required */
+            required: boolean;
         };
         /** CurrentUser */
         CurrentUser: {
@@ -1473,6 +2148,51 @@ export interface components {
             is_active?: boolean | null;
             /** Name */
             name?: string | null;
+        };
+        /** DocumentOut */
+        DocumentOut: {
+            /** Can Delete */
+            can_delete: boolean;
+            /** Content Type */
+            content_type: string;
+            /** Description */
+            description: string | null;
+            /** Download Url */
+            download_url: string;
+            /** Filename */
+            filename: string;
+            /**
+             * Folder Id
+             * Format: uuid
+             */
+            folder_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Size */
+            size: number;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
+            uploaded_by: components["schemas"]["UserRef"] | null;
+        };
+        /** DocumentPermissions */
+        DocumentPermissions: {
+            /** Manage Folders */
+            manage_folders: boolean;
+            /** Upload */
+            upload: boolean;
+        };
+        /** DocumentUpdate */
+        DocumentUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Folder Id */
+            folder_id?: string | null;
         };
         /** DottedLine */
         DottedLine: {
@@ -1741,37 +2461,53 @@ export interface components {
              */
             stage: "internal" | "client";
         };
+        /** FolderIn */
+        FolderIn: {
+            /** Name */
+            name: string;
+        };
+        /** FolderOut */
+        FolderOut: {
+            /** Count */
+            count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is System */
+            is_system: boolean;
+            /** Name */
+            name: string;
+        };
+        /** GuestIn */
+        GuestIn: {
+            /** Email */
+            email?: string | null;
+            /** Name */
+            name: string;
+            /** Organisation */
+            organisation?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
-        /** KickoffAction */
-        KickoffAction: {
-            /**
-             * Action
-             * @enum {string}
-             */
-            action: "schedule" | "complete";
-            /**
-             * At
-             * @description Meeting date/time (schedule)
-             */
-            at?: string | null;
-            /** Notes */
-            notes?: string | null;
-        };
-        /** KickoffOut */
+        /**
+         * KickoffOut
+         * @description Derived from meetings: a completed meeting of the type completes the step.
+         */
         KickoffOut: {
             /** At */
             at: string | null;
-            /** Notes */
-            notes: string | null;
+            /** Meeting Id */
+            meeting_id: string | null;
             /**
-             * Status
+             * State
              * @enum {string}
              */
-            status: "none" | "scheduled" | "done";
+            state: "none" | "scheduled" | "done";
         };
         /** KpiConfirmation */
         KpiConfirmation: {
@@ -1790,12 +2526,23 @@ export interface components {
         KpiIn: {
             /** Baseline */
             baseline: number | string;
+            /** Current Value */
+            current_value?: number | string | null;
+            /** Description */
+            description?: string | null;
             /** Metric */
             metric: string;
             /** Target */
             target: number | string;
+            /** Target Date */
+            target_date?: string | null;
             /** Unit */
             unit: string;
+        };
+        /** KpiNotesIn */
+        KpiNotesIn: {
+            /** Notes */
+            notes?: string | null;
         };
         /** KpiOut */
         KpiOut: {
@@ -1807,6 +2554,10 @@ export interface components {
             confirmed_by_name: string | null;
             /** Confirmed Via */
             confirmed_via: string | null;
+            /** Current Value */
+            current_value: string | null;
+            /** Description */
+            description: string | null;
             /**
              * Id
              * Format: uuid
@@ -1814,22 +2565,117 @@ export interface components {
             id: string;
             /** Metric */
             metric: string;
+            /** Progress */
+            progress: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "not_measured" | "on_track" | "at_risk" | "behind" | "achieved";
             /** Target */
             target: string;
+            /** Target Date */
+            target_date: string | null;
             /** Unit */
             unit: string;
         };
-        /** Message */
-        Message: {
-            /** Message */
-            message: string;
+        /** KpiSummary */
+        KpiSummary: {
+            /** Achieved */
+            achieved: number;
+            /** At Risk */
+            at_risk: number;
+            /** Behind */
+            behind: number;
+            /** Confirmed At */
+            confirmed_at: string | null;
+            /** Confirmed By */
+            confirmed_by: string | null;
+            /** Confirmed Via */
+            confirmed_via: string | null;
+            /** Not Measured */
+            not_measured: number;
+            /** Notes */
+            notes: string | null;
+            /** Notes At */
+            notes_at: string | null;
+            notes_by: components["schemas"]["UserRef"] | null;
+            /** On Track */
+            on_track: number;
+            /** Overall */
+            overall: number | null;
+            /** Total */
+            total: number;
         };
-        /** OnboardingDetail */
-        OnboardingDetail: {
-            /** Access */
-            access: components["schemas"]["AccessItemOut"][];
-            /** Client Code */
-            client_code: string;
+        /** KpiUpdate */
+        KpiUpdate: {
+            /** Baseline */
+            baseline?: number | string | null;
+            /** Current Value */
+            current_value?: number | string | null;
+            /** Description */
+            description?: string | null;
+            /** Metric */
+            metric?: string | null;
+            /** Target */
+            target?: number | string | null;
+            /** Target Date */
+            target_date?: string | null;
+            /** Unit */
+            unit?: string | null;
+        };
+        /** MeetingIn */
+        MeetingIn: {
+            /** Agenda */
+            agenda?: string | null;
+            /** Attendee Ids */
+            attendee_ids?: string[];
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /** Description */
+            description?: string | null;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /** Guests */
+            guests?: components["schemas"]["GuestIn"][];
+            /**
+             * Location
+             * @description Link or address
+             */
+            location?: string | null;
+            /** Platform */
+            platform?: ("google_meet" | "zoom" | "teams" | "phone" | "in_person" | "other") | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /** Title */
+            title: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "kickoff" | "review" | "planning" | "internal" | "reporting" | "other";
+        };
+        /** MeetingOut */
+        MeetingOut: {
+            /** Action Items */
+            action_items: components["schemas"]["ActionItemOut"][];
+            /** Agenda */
+            agenda: string | null;
+            /** Attendees */
+            attendees: components["schemas"]["AttendeeOut"][];
+            /** Can Manage */
+            can_manage: boolean;
+            /** Cancelled Reason */
+            cancelled_reason: string | null;
             /**
              * Client Id
              * Format: uuid
@@ -1839,33 +2685,170 @@ export interface components {
             client_name: string;
             /** Completed At */
             completed_at: string | null;
+            /** Description */
+            description: string | null;
             /**
-             * Contract
+             * Display Status
              * @enum {string}
              */
-            contract: "none" | "draft" | "signed";
-            /** Contract Signed At */
-            contract_signed_at: string | null;
+            display_status: "upcoming" | "awaiting_notes" | "completed" | "cancelled";
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Location */
+            location: string | null;
+            /** Notes */
+            notes: string | null;
+            /** Platform */
+            platform: ("google_meet" | "zoom" | "teams" | "phone" | "in_person" | "other") | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scheduled" | "completed" | "cancelled";
+            /** Title */
+            title: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "kickoff" | "review" | "planning" | "internal" | "reporting" | "other";
+        };
+        /** MeetingStats */
+        MeetingStats: {
+            /** Cancelled */
+            cancelled: number;
+            /** Completed */
+            completed: number;
+            /** Total */
+            total: number;
+            /** Upcoming */
+            upcoming: number;
+        };
+        /** MeetingUpdate */
+        MeetingUpdate: {
+            /** Agenda */
+            agenda?: string | null;
+            /** Attendee Ids */
+            attendee_ids?: string[] | null;
+            /** Description */
+            description?: string | null;
+            /** Ends At */
+            ends_at?: string | null;
+            /** Guests */
+            guests?: components["schemas"]["GuestIn"][] | null;
+            /** Location */
+            location?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Platform */
+            platform?: ("google_meet" | "zoom" | "teams" | "phone" | "in_person" | "other") | null;
+            /** Starts At */
+            starts_at?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Type */
+            type?: ("kickoff" | "review" | "planning" | "internal" | "reporting" | "other") | null;
+        };
+        /** Message */
+        Message: {
+            /** Message */
+            message: string;
+        };
+        /** NextActionOut */
+        NextActionOut: {
+            /** Detail */
+            detail: string;
+            /**
+             * Due
+             * Format: date
+             */
+            due: string;
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "high" | "medium" | "low";
+            /** Step */
+            step: string;
+            /** Title */
+            title: string;
+        };
+        /** NotificationList */
+        NotificationList: {
+            /** Items */
+            items: components["schemas"]["NotificationOut"][];
+            /** Unread */
+            unread: number;
+        };
+        /** NotificationOut */
+        NotificationOut: {
+            /** Body */
+            body: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Link */
+            link: string | null;
+            /** Read */
+            read: boolean;
+            /** Title */
+            title: string;
+        };
+        /** OnboardingDetail */
+        OnboardingDetail: {
+            /** Access */
+            access: components["schemas"]["AccessItemOut"][];
+            access_summary: components["schemas"]["AccessSummary"];
+            client: components["schemas"]["ClientSummary"];
+            /** Completed At */
+            completed_at: string | null;
+            /** Contract Documents */
+            contract_documents: number;
+            /** Coverage */
+            coverage: components["schemas"]["CoverageOut"][];
+            /** Documents */
+            documents: number;
             kickoff_client: components["schemas"]["KickoffOut"];
             kickoff_internal: components["schemas"]["KickoffOut"];
+            kpi_summary: components["schemas"]["KpiSummary"];
             /** Kpis */
             kpis: components["schemas"]["KpiOut"][];
+            /** Locked Reason */
+            locked_reason: string | null;
+            /** Next Actions */
+            next_actions: components["schemas"]["NextActionOut"][];
             permissions: components["schemas"]["Permissions"];
             /** Progress */
             progress: number;
-            /**
-             * Questionnaire
-             * @enum {string}
-             */
-            questionnaire: "none" | "sent" | "submitted";
-            /** Questionnaire Sent At */
-            questionnaire_sent_at: string | null;
-            /** Questionnaire Submitted At */
-            questionnaire_submitted_at: string | null;
-            /** Questions */
-            questions: components["schemas"]["QuestionOut"][];
+            questionnaire: components["schemas"]["QuestionnaireOut"];
+            /** Quick Status */
+            quick_status: components["schemas"]["QuickStatus"][];
             /** Reviewed At */
             reviewed_at: string | null;
+            /** Stages */
+            stages: components["schemas"]["StageOut"][];
             /**
              * Status
              * @enum {string}
@@ -1874,7 +2857,7 @@ export interface components {
             /** Steps */
             steps: components["schemas"]["StepOut"][];
             /** Team */
-            team: components["schemas"]["UserRef"][];
+            team: components["schemas"]["TeamMemberOut"][];
         };
         /** OpenApproval */
         OpenApproval: {
@@ -1909,6 +2892,17 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** PastSeo */
+        PastSeo: {
+            /** Details */
+            details?: string | null;
+            /** Penalties */
+            penalties?: ("yes" | "no" | "unsure") | null;
+            /** Tools */
+            tools?: string | null;
+            /** Worked Before */
+            worked_before?: ("yes" | "no" | "unsure") | null;
+        };
         /** PendingRegistration */
         PendingRegistration: {
             /** Email */
@@ -1934,6 +2928,12 @@ export interface components {
             confirm_kpis: boolean;
             /** Manage */
             manage: boolean;
+            /** Owner */
+            owner: boolean;
+            /** Schedule Meetings */
+            schedule_meetings: boolean;
+            /** Upload Documents */
+            upload_documents: boolean;
             /** Verify Access */
             verify_access: boolean;
         };
@@ -2096,19 +3096,15 @@ export interface components {
         };
         /** PublicQuestionnaire */
         PublicQuestionnaire: {
+            answers: components["schemas"]["Answers"];
             /** Client Name */
             client_name: string;
-            /** Questions */
-            questions: components["schemas"]["QuestionOut"][];
-        };
-        /** QuestionOut */
-        QuestionOut: {
-            /** Answer */
-            answer: string | null;
-            /** Key */
-            key: string;
-            /** Label */
-            label: string;
+            /** Goals */
+            goals: components["schemas"]["Choice"][];
+            /** Sections */
+            sections: components["schemas"]["SectionOut"][];
+            /** Tones */
+            tones: components["schemas"]["Choice"][];
         };
         /**
          * QuestionnaireLinkOut
@@ -2123,6 +3119,41 @@ export interface components {
             onboarding: components["schemas"]["OnboardingDetail"];
             /** Url */
             url: string;
+        };
+        /** QuestionnaireOut */
+        QuestionnaireOut: {
+            answers: components["schemas"]["Answers"];
+            /** Goals */
+            goals: components["schemas"]["Choice"][];
+            /** Sections */
+            sections: components["schemas"]["SectionOut"][];
+            /** Sent At */
+            sent_at: string | null;
+            /** Source */
+            source: ("client" | "staff") | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "none" | "sent" | "submitted";
+            /** Submitted At */
+            submitted_at: string | null;
+            /** Tones */
+            tones: components["schemas"]["Choice"][];
+            /** Updated At */
+            updated_at: string | null;
+        };
+        /** QuickStatus */
+        QuickStatus: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "pending" | "in_progress" | "completed" | "blocked";
         };
         /** Ref */
         Ref: {
@@ -2144,6 +3175,19 @@ export interface components {
             /** Id Token */
             id_token: string;
         };
+        /** SectionOut */
+        SectionOut: {
+            /** Complete */
+            complete: boolean;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Missing */
+            missing: string[];
+            /** Question */
+            question: string;
+        };
         /**
          * SessionRequest
          * @description Exchange a Firebase ID token (from the browser SDK) for an app session.
@@ -2152,13 +3196,30 @@ export interface components {
             /** Id Token */
             id_token: string;
         };
-        /** StatusChange */
-        StatusChange: {
+        /** StageOut */
+        StageOut: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
             /**
-             * Status
+             * State
              * @enum {string}
              */
-            status: "backlog" | "ready" | "in_progress" | "blocked" | "internal_review" | "client_approval" | "completed" | "cancelled";
+            state: "pending" | "in_progress" | "completed" | "blocked";
+        };
+        /** StatusCounts */
+        StatusCounts: {
+            /** Active */
+            active: number;
+            /** All */
+            all: number;
+            /** Completed */
+            completed: number;
+            /** On Hold */
+            on_hold: number;
+            /** Onboarding */
+            onboarding: number;
         };
         /** StepOut */
         StepOut: {
@@ -2189,6 +3250,18 @@ export interface components {
              * Format: uuid
              */
             task_id: string;
+        };
+        /** TargetMarkets */
+        TargetMarkets: {
+            /** Audiences */
+            audiences?: string | null;
+            /** Languages */
+            languages?: string | null;
+            /**
+             * Locations
+             * @description Countries, regions, cities
+             */
+            locations?: string | null;
         };
         /** TaskCreate */
         TaskCreate: {
@@ -2351,10 +3424,53 @@ export interface components {
         /** TeamMemberIn */
         TeamMemberIn: {
             /**
+             * Allocation
+             * @description % of their time
+             */
+            allocation?: number | null;
+            /** Area */
+            area?: ("account" | "project_management" | "seo" | "content" | "design" | "development" | "social" | "analytics") | null;
+            /** Responsibilities */
+            responsibilities?: string | null;
+            /** Role Title */
+            role_title?: string | null;
+            /**
              * User Id
              * Format: uuid
              */
             user_id: string;
+        };
+        /** TeamMemberOut */
+        TeamMemberOut: {
+            /**
+             * Added At
+             * Format: date-time
+             */
+            added_at: string;
+            /** Allocation */
+            allocation: number | null;
+            /** Area */
+            area: ("account" | "project_management" | "seo" | "content" | "design" | "development" | "social" | "analytics") | null;
+            /** Email */
+            email: string;
+            /** Responsibilities */
+            responsibilities: string | null;
+            /** Role */
+            role: string | null;
+            /** Role Title */
+            role_title: string | null;
+            user: components["schemas"]["UserRef"];
+        };
+        /** TeamMemberUpdate */
+        TeamMemberUpdate: {
+            /** Allocation */
+            allocation?: number | null;
+            /** Area */
+            area?: ("account" | "project_management" | "seo" | "content" | "design" | "development" | "social" | "analytics") | null;
+            /** Responsibilities */
+            responsibilities?: string | null;
+            /** Role Title */
+            role_title?: string | null;
         };
         /** UserOption */
         UserOption: {
@@ -2407,6 +3523,26 @@ export interface components {
              */
             submitted_at: string;
             submitted_by: components["schemas"]["UserRef"] | null;
+        };
+        /**
+         * StatusChange
+         * @description hold: Onboarding/Active → On hold. complete: Active/On hold → Completed.
+         *     reactivate: On hold/Completed → Onboarding or Active (by onboarding state).
+         */
+        app__modules__clients__schemas__StatusChange: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "hold" | "complete" | "reactivate";
+        };
+        /** StatusChange */
+        app__modules__tasks__schemas__StatusChange: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "backlog" | "ready" | "in_progress" | "blocked" | "internal_review" | "client_approval" | "completed" | "cancelled";
         };
     };
     responses: never;
@@ -2838,7 +3974,7 @@ export interface operations {
             query?: {
                 /** @description Name, code or domain */
                 q?: string | null;
-                status?: ("contract_pending" | "onboarding" | "active") | null;
+                status?: ("onboarding" | "active" | "on_hold" | "completed") | null;
                 /** @description name | code | created_at, '-' = desc */
                 sort?: string | null;
                 page?: number;
@@ -2964,6 +4100,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccountManagerOption"][];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    clients_status_counts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusCounts"];
                 };
             };
             /** @description Authentication required */
@@ -3173,16 +4347,20 @@ export interface operations {
             };
         };
     };
-    documents_download_file: {
+    clients_change_status: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                file_id: string;
+                client_id: string;
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["app__modules__clients__schemas__StatusChange"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3190,7 +4368,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ClientDetail"];
                 };
             };
             /** @description Authentication required */
@@ -3211,17 +4389,567 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Business rule violated */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Not yet ported from the pilot */
-            501: {
+        };
+    };
+    documents_client_documents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientDocuments"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate folder name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description File type/size or business rule */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    documents_upload_document: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_documents_upload_document"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentOut"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate folder name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description File type/size or business rule */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    documents_create_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FolderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientDocuments"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate folder name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description File type/size or business rule */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    documents_delete_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                folder_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientDocuments"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate folder name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description File type/size or business rule */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    documents_rename_folder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                folder_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FolderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientDocuments"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate folder name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description File type/size or business rule */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    documents_delete_document: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate folder name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description File type/size or business rule */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    documents_update_document: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentOut"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate folder name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description File type/size or business rule */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    documents_download_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate folder name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description File type/size or business rule */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3276,6 +5004,684 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    meetings_schedule_meeting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingOut"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    meetings_delete_action_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingOut"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    meetings_update_action_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActionItemUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingOut"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    meetings_client_meetings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientMeetings"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    meetings_get_meeting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingOut"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    meetings_update_meeting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingOut"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    meetings_add_action_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActionItemIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingOut"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    meetings_cancel_meeting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingOut"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    meetings_complete_meeting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingOut"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found, or outside your access */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    notifications_my_notifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationList"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    notifications_mark_all_read: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationList"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    notifications_mark_read: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationList"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not one of your notifications */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3385,12 +5791,155 @@ export interface operations {
             };
         };
     };
-    onboarding_receive_all_access: {
+    onboarding_add_access_item: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessItemIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Client not found or not visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    onboarding_bulk_access: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkAccess"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Client not found or not visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    onboarding_delete_access_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+                key: string;
             };
             cookie?: never;
         };
@@ -3524,7 +6073,79 @@ export interface operations {
             };
         };
     };
-    onboarding_complete_onboarding: {
+    onboarding_update_access_details: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessDetails"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Client not found or not visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    onboarding_complete: {
         parameters: {
             query?: never;
             header?: never;
@@ -3591,7 +6212,7 @@ export interface operations {
             };
         };
     };
-    onboarding_contract: {
+    onboarding_kpi_notes: {
         parameters: {
             query?: never;
             header?: never;
@@ -3602,79 +6223,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ContractAction"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OnboardingDetail"];
-                };
-            };
-            /** @description Authentication required */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Permission denied */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Client not found or not visible */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Validation failed or business rule violated */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    onboarding_kickoff: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                client_id: string;
-                kind: "client" | "internal";
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["KickoffAction"];
+                "application/json": components["schemas"]["KpiNotesIn"];
             };
         };
         responses: {
@@ -3944,7 +6493,79 @@ export interface operations {
             };
         };
     };
-    onboarding_record_answers: {
+    onboarding_update_kpi: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+                kpi_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KpiUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Client not found or not visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    onboarding_save_questionnaire_draft: {
         parameters: {
             query?: never;
             header?: never;
@@ -4082,7 +6703,78 @@ export interface operations {
             };
         };
     };
-    onboarding_pass_review: {
+    onboarding_submit_questionnaire: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswersIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Client not found or not visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    onboarding_review: {
         parameters: {
             query?: never;
             header?: never;
@@ -4355,6 +7047,78 @@ export interface operations {
             };
         };
     };
+    onboarding_update_team_member: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamMemberUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Client not found or not visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     onboarding_public_questionnaire: {
         parameters: {
             query?: never;
@@ -4365,6 +7129,50 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicQuestionnaire"];
+                };
+            };
+            /** @description Link invalid, used or expired */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Missing answers */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    onboarding_save_public_draft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswersIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -5008,7 +7816,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["StatusChange"];
+                "application/json": components["schemas"]["app__modules__tasks__schemas__StatusChange"];
             };
         };
         responses: {

@@ -6,6 +6,7 @@
  * Every number is counted from the records the signed-in user may see.
  */
 import { useQuery } from '@tanstack/react-query';
+import { CircleCheck, ClipboardCheck, PauseCircle, Users } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/Badge';
@@ -14,10 +15,10 @@ import { Panel, StatCard } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Link } from '@/components/ui/Link';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { useClients, type ClientStatus } from '@/features/clients/api';
-import { STATUS_TONE } from '@/features/clients/ClientsListPage';
+import { useClientCounts, useClients } from '@/features/clients/api';
+import { STATUS_TONE } from '@/features/clients/api';
 import { useOnboardingBoard } from '@/features/onboarding/api';
-import { ONBOARDING_STATUS } from '@/features/onboarding/OnboardingTab';
+import { ONBOARDING_STATUS } from '@/features/onboarding/api';
 import { useTasks } from '@/features/tasks/api';
 import { TaskDrawer } from '@/features/tasks/TaskDrawer';
 import { TaskTable } from '@/features/tasks/TaskTable';
@@ -30,26 +31,28 @@ import { useAuth } from '@/lib/auth-context';
 import { formatDate } from '@/lib/format';
 import { can, P, ROLE_LABELS, type RoleKey } from '@/lib/permissions';
 
-function useClientCount(status?: ClientStatus) {
-  const result = useClients({ status, page_size: 1 });
-  return result.data?.total;
-}
-
 function ClientTiles() {
-  const total = useClientCount();
-  const pending = useClientCount('contract_pending');
-  const onboarding = useClientCount('onboarding');
-  const active = useClientCount('active');
+  const counts = useClientCounts().data;
+  const total = counts?.all;
+  const onboarding = counts?.onboarding;
+  const active = counts?.active;
+  const held = counts?.on_hold;
   const show = (n: number | undefined) => (n === undefined ? '…' : n);
   return (
     <div
       className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-4"
       data-testid="dashboard-tiles"
     >
-      <StatCard label="Clients" value={show(total)} hint="All clients you can see" />
-      <StatCard label="Contract pending" value={show(pending)} />
-      <StatCard label="In onboarding" value={show(onboarding)} />
-      <StatCard label="Active clients" value={show(active)} hint="Onboarding completed" />
+      <StatCard label="Clients" value={show(total)} hint="All clients you can see" icon={Users} />
+      <StatCard label="In onboarding" value={show(onboarding)} icon={ClipboardCheck} tone="warn" />
+      <StatCard
+        label="Active clients"
+        value={show(active)}
+        hint="Onboarding completed"
+        icon={CircleCheck}
+        tone="ok"
+      />
+      <StatCard label="On hold" value={show(held)} icon={PauseCircle} tone="bad" />
     </div>
   );
 }
@@ -146,7 +149,7 @@ function OnboardingPipeline() {
                 return (
                   <tr key={row.client_id}>
                     <td>
-                      <Link className="link" to={`/clients/${row.client_id}/onboarding`}>
+                      <Link className="link" to={`/clients/${row.client_id}`}>
                         {row.client_name}
                       </Link>
                       {row.current_step ? <div className="code">{row.current_step}</div> : null}

@@ -10,6 +10,7 @@ import { DocumentTitle } from '@/components/shell/DocumentTitle';
 import { Sidebar } from '@/components/shell/Sidebar';
 import { Topbar } from '@/components/shell/Topbar';
 import { useApprovals } from '@/features/approvals/api';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { useTasks } from '@/features/tasks/api';
 import { useAuth } from '@/lib/auth-context';
 
@@ -39,7 +40,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="min-h-full shell:grid shell:grid-cols-[248px_minmax(0,1fr)]">
+    <div className="min-h-full shell:grid shell:grid-cols-[248px_minmax(0,1fr)] shell:bg-[linear-gradient(to_right,var(--color-rail)_248px,transparent_248px)]">
       <DocumentTitle />
       <a
         href="#main"
@@ -57,7 +58,11 @@ export function AppLayout() {
         />
       ) : null}
       <div className="flex min-w-0 flex-col">
-        <Topbar mobileOpen={mobileOpen} onToggleMenu={() => setMobileOpen((open) => !open)} />
+        <Topbar
+          mobileOpen={mobileOpen}
+          onToggleMenu={() => setMobileOpen((open) => !open)}
+          bell={<NotificationBell />}
+        />
         <main
           id="main"
           tabIndex={-1}

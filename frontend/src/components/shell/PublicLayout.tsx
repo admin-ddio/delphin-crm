@@ -33,7 +33,7 @@ export function PublicLayout() {
 /** No chrome at all: the public client questionnaire (/q/:token). */
 export function BareLayout() {
   return (
-    <main id="main" className="mx-auto max-w-3xl px-4 py-10">
+    <main id="main" className="mx-auto max-w-6xl px-4 py-10">
       <DocumentTitle />
       <Outlet />
     </main>

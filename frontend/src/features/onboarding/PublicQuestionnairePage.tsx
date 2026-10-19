@@ -1,25 +1,34 @@
 /**
  * /q/:token: the questionnaire a client fills in from the link their Account
- * Manager sent. No sign-in (the single-use token is the credential), no app chrome.
+ * Manager sent (same 7-step wizard as staff). No sign-in: the single-use token is
+ * the credential. Drafts can be saved and resumed with the same link.
  */
-import { useId, useState, type FormEvent } from 'react';
+import { Building2 } from 'lucide-react';
+import { useState } from 'react';
 import { useParams } from 'react-router';
 
 import { Alert } from '@/components/ui/Alert';
-import { Button } from '@/components/ui/Button';
-import { Panel } from '@/components/ui/Card';
-import { submitPublicQuestionnaire, usePublicQuestionnaire } from '@/features/onboarding/api';
+import { useToast } from '@/components/ui/Toast';
+import {
+  savePublicDraft,
+  submitPublicQuestionnaire,
+  usePublicQuestionnaire,
+} from '@/features/onboarding/api';
+import { QuestionnaireWizard } from '@/features/onboarding/QuestionnaireWizard';
 import { ApiError } from '@/lib/api-client';
 
-function Header({ subtitle }: { subtitle?: string }) {
+function Header() {
   return (
     <div className="mb-6 flex items-center gap-2.5">
-      <span aria-hidden className="grid size-[30px] place-items-center rounded-[7px] bg-accent font-bold text-on-accent">
-        D
+      <span
+        aria-hidden
+        className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-[#7c5cff] to-[#4424cf] text-white"
+      >
+        <Building2 className="size-5" />
       </span>
       <div>
-        <b className="block text-sm leading-[1.1]">Delphin Digital</b>
-        <small className="block text-[11px] text-muted">{subtitle ?? 'Client onboarding'}</small>
+        <b className="block text-[15px] leading-[1.1]">Delphin Digital</b>
+        <small className="block text-[11px] text-muted">Client onboarding</small>
       </div>
     </div>
   );
@@ -28,89 +37,64 @@ function Header({ subtitle }: { subtitle?: string }) {
 export function Component() {
   const { token = '' } = useParams();
   const questionnaire = usePublicQuestionnaire(token);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
   const [done, setDone] = useState(false);
-  const formId = useId();
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    try {
-      await submitPublicQuestionnaire(token, answers);
-      setDone(true);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't send your answers. Try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (questionnaire.isPending) {
-    return (
-      <>
-        <Header />
-        <h1 className="text-[21px] font-bold">Client questionnaire</h1>
-        <p className="mt-2 text-muted">Loading…</p>
-      </>
-    );
-  }
-  if (questionnaire.isError || !questionnaire.data) {
-    return (
-      <>
-        <Header />
-        <h1 className="text-[21px] font-bold">Client questionnaire</h1>
-        <Alert tone="bad" className="mt-4">
-          This questionnaire link is invalid, already used or has expired. Ask your account manager
-          for a new one.
-        </Alert>
-      </>
-    );
-  }
-  if (done) {
-    return (
-      <>
-        <Header />
-        <h1 className="text-[21px] font-bold">Thank you</h1>
-        <Alert tone="ok" className="mt-4" title="Your answers have been sent">
-          Your account manager at Delphin Digital will be in touch about the next steps.
-        </Alert>
-      </>
-    );
-  }
+  const message = (err: unknown) =>
+    err instanceof ApiError ? err.message : "Couldn't save your answers. Try again.";
 
   return (
-    <>
-      <Header subtitle={`Onboarding questionnaire for ${questionnaire.data.client_name}`} />
-      <h1 className="text-[21px] font-bold">Client questionnaire</h1>
-      <p className="mt-1 mb-5 text-muted">
-        A few questions so we can plan your work. Every question needs an answer; this link works once.
-      </p>
-      <Panel>
-        <form className="flex flex-col gap-4" onSubmit={submit}>
-          {error ? <Alert tone="bad">{error}</Alert> : null}
-          {questionnaire.data.questions.map((q) => (
-            <div key={q.key} className="label">
-              <label htmlFor={`${formId}-${q.key}`}>{q.label}</label>
-              <textarea
-                id={`${formId}-${q.key}`}
-                className="input min-h-[70px] resize-y"
-                required
-                maxLength={4000}
-                value={answers[q.key] ?? ''}
-                onChange={(e) => setAnswers((a) => ({ ...a, [q.key]: e.target.value }))}
-              />
-            </div>
-          ))}
-          <div>
-            <Button type="submit" variant="primary" disabled={submitting}>
-              {submitting ? 'Sending…' : 'Send answers'}
-            </Button>
-          </div>
-        </form>
-      </Panel>
-    </>
+    <div>
+      <Header />
+      {questionnaire.isPending ? <p className="text-muted">Loading…</p> : null}
+      {questionnaire.isError ? (
+        <>
+          <h1 className="text-[26px] font-bold">Client questionnaire</h1>
+          <Alert tone="bad">
+            {questionnaire.error instanceof ApiError
+              ? questionnaire.error.message
+              : "Couldn't load the questionnaire. Reload the page to try again."}{' '}
+            Ask your Account Manager for a new link.
+          </Alert>
+        </>
+      ) : null}
+      {done ? (
+        <Alert tone="ok" title="Your answers have been sent">
+          Thank you! Your Account Manager will be in touch about the next steps. You can close this
+          page.
+        </Alert>
+      ) : null}
+      {questionnaire.data && !done ? (
+        <>
+          <h1 className="text-[26px] font-bold">
+            Onboarding questionnaire for {questionnaire.data.client_name}
+          </h1>
+          <p className="mt-1 mb-6 text-muted">
+            Help us understand your business so we can build the right strategy. Save a draft any
+            time and come back with the same link.
+          </p>
+          <QuestionnaireWizard
+            clientName={questionnaire.data.client_name}
+            form={questionnaire.data}
+            submitLabel="Send answers"
+            onSaveDraft={async (answers) => {
+              try {
+                await savePublicDraft(token, answers);
+                toast({ title: 'Draft saved. Use the same link to continue later.' });
+              } catch (err) {
+                toast({ title: message(err), tone: 'error' });
+              }
+            }}
+            onSubmit={async (answers) => {
+              try {
+                await submitPublicQuestionnaire(token, answers);
+                setDone(true);
+              } catch (err) {
+                toast({ title: message(err), tone: 'error' });
+              }
+            }}
+          />
+        </>
+      ) : null}
+    </div>
   );
 }

@@ -267,6 +267,9 @@ class CoverageOut(BaseModel):
 
 
 class Permissions(BaseModel):
+    #: The client's own AM (or Super Admin), whether or not onboarding is still open:
+    #: KPI tracking and notes continue after completion.
+    owner: bool
     manage: bool
     verify_access: bool
     confirm_kpis: bool
