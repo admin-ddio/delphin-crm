@@ -108,6 +108,7 @@ class Context:
     access: list[OnboardingAccessItem]
     kpis: list[OnboardingKpi]
     team: list[User]
+    has_project: bool
 
     def snapshot(self) -> Snapshot:
         return Snapshot(
@@ -125,7 +126,7 @@ class Context:
             team_size=len(self.team),
             reviewed=self.state.reviewed_at is not None,
             completed=self.state.completed_at is not None,
-            has_project=False,  # TODO: projects module
+            has_project=self.has_project,
         )
 
 
@@ -150,6 +151,7 @@ class OnboardingService:
         access = await self._repo.access_items_for(ids)
         kpis = await self._repo.kpi_counts(ids)
         teams = await self._repo.team_sizes(ids)
+        with_project = await self._repo.clients_with_projects(ids)
         rows = []
         for client, manager in clients:
             state = states.get(client.id)
@@ -163,6 +165,7 @@ class OnboardingService:
                 "kpis_total": total,
                 "kpis_unconfirmed": unconfirmed,
                 "team_size": teams.get(client.id, 0),
+                "has_project": client.id in with_project,
             }
             if state is not None:  # no row yet = nothing started (lazy creation)
                 fields |= {
@@ -532,6 +535,7 @@ class OnboardingService:
             access=await self._repo.access_items(client.id),
             kpis=await self._repo.kpis(client.id),
             team=await self._repo.team(client.id),
+            has_project=bool(await self._repo.clients_with_projects([client.id])),
         )
 
     async def _open_for_manager(self, actor: Actor, client_id: uuid.UUID) -> Context:

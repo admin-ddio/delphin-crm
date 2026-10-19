@@ -15,7 +15,10 @@ export function can(granted: readonly Permission[], permission: Permission): boo
   return granted.includes(WILDCARD) || granted.includes(permission);
 }
 
-export function canAny(granted: readonly Permission[], permissions: readonly Permission[]): boolean {
+export function canAny(
+  granted: readonly Permission[],
+  permissions: readonly Permission[],
+): boolean {
   return permissions.some((permission) => can(granted, permission));
 }
 
@@ -34,6 +37,7 @@ export const P = {
   accessVerify: 'onboarding.access_verify',
   kpiConfirm: 'onboarding.kpi_confirm',
   projectsCreate: 'projects.create',
+  projectsViewAll: 'projects.view_all',
   tasksCreate: 'tasks.create',
   tasksReview: 'tasks.review',
   clientDecisionRecord: 'approvals.client_decision',
@@ -80,13 +84,22 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, readonly Permission[]> = 
     P.accessVerify,
     P.kpiConfirm,
     P.projectsCreate,
+    P.projectsViewAll,
     P.tasksCreate,
     P.clientDecisionRecord,
     P.retainersManage,
     P.financeView,
   ],
-  project_manager: [P.clientsViewAll, P.projectsCreate, P.tasksCreate, P.tasksReview, P.accessVerify, P.jobsRun],
+  project_manager: [
+    P.clientsViewAll,
+    P.projectsCreate,
+    P.projectsViewAll,
+    P.tasksCreate,
+    P.tasksReview,
+    P.accessVerify,
+    P.jobsRun,
+  ],
   team_lead: [P.tasksCreate, P.tasksReview, P.accessVerify],
   employee: [],
-  finance: [P.clientsViewAll, P.financeManage, P.financeView],
+  finance: [P.clientsViewAll, P.projectsViewAll, P.financeManage, P.financeView],
 };

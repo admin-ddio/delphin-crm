@@ -320,11 +320,11 @@ test.describe('clients', () => {
 test.describe('onboarding', () => {
   test.use({ storageState: AUTH_FILE });
 
-  test('all 13 steps through the UI, including the public questionnaire', async ({
+  test('all 13 steps through the UI, the public questionnaire and the first project', async ({
     page,
     browser,
   }) => {
-    test.setTimeout(150_000);
+    test.setTimeout(240_000);
     const stamp = Date.now();
     const name = `Onboarding Ltd ${stamp}`;
 
@@ -338,6 +338,7 @@ test.describe('onboarding', () => {
     await page.getByLabel('Account Manager *').selectOption({ label: 'E2E Admin' });
     await page.getByRole('button', { name: 'Create client' }).click();
     await expect(page.getByText('Next required action: Contract signed')).toBeVisible();
+    const clientPath = new URL(page.url()).pathname;
     await page.getByRole('link', { name: 'Open onboarding →' }).click();
     const onboarding = page.getByTestId('onboarding');
     await expect(onboarding.getByText('15%')).toBeVisible();
@@ -418,5 +419,54 @@ test.describe('onboarding', () => {
     await page.goto('/onboarding');
     const row = page.getByTestId('onboarding-board').getByRole('row').filter({ hasText: name });
     await expect(row.getByText('Completed')).toBeVisible();
+
+    // 13. The first project, from the template, from the client overview.
+    await page.goto(clientPath);
+    await expect(page.getByText('Next required action: Create the delivery project')).toBeVisible();
+    await page.getByRole('link', { name: 'Create project →' }).click();
+    await expect(page.getByLabel('Project name')).toHaveValue(`${name} SEO Retainer`);
+    await page.getByLabel('Project manager').selectOption({ label: 'E2E Admin' });
+    await page.getByRole('button', { name: 'Create project' }).click();
+    await expect(
+      page.getByRole('heading', { level: 1, name: `${name} SEO Retainer` }),
+    ).toBeVisible();
+    const board = page.getByTestId('task-board');
+    const backlog = board.getByRole('region', { name: 'Backlog' });
+    await expect(backlog.getByRole('button')).toHaveCount(5);
+    await expect(backlog.getByText(/E2E Flows/)).toHaveCount(5);
+
+    // Review-required work can be started but not completed directly.
+    await backlog.getByRole('button', { name: /Keyword research/ }).click();
+    const research = page.getByRole('dialog', { name: 'Keyword research' });
+    await research.getByRole('button', { name: 'Start work' }).click();
+    await expect(research.getByText('In progress', { exact: true })).toBeVisible();
+    await expect(research.getByRole('button', { name: 'Mark completed' })).toHaveCount(0);
+    await expect(research.getByText(/can't be marked completed directly/)).toBeVisible();
+    await research.getByRole('button', { name: 'Close' }).click();
+    await expect(board.getByRole('region', { name: 'In progress' }).getByRole('button')).toHaveCount(1);
+
+    // A task without review: create, start, complete.
+    await page.getByRole('button', { name: 'New task' }).click();
+    const newTask = page.getByRole('dialog', { name: 'New task' });
+    await newTask.getByLabel('Title').fill('Fix broken links');
+    await newTask.getByLabel('Assignee').selectOption({ label: 'E2E Admin' });
+    await newTask.getByLabel('Requires internal review').uncheck();
+    await newTask.getByRole('button', { name: 'Create task' }).click();
+    const fix = page.getByRole('dialog', { name: 'Fix broken links' });
+    await fix.getByRole('button', { name: 'Start work' }).click();
+    await fix.getByRole('button', { name: 'Mark completed' }).click();
+    await expect(fix.getByText('Completed', { exact: true }).first()).toBeVisible();
+    await fix.getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByTestId('project-stats').getByText('17%')).toBeVisible(); // 1 of 6
+
+    // My open work lists the specialist's queue on /tasks; the project is listed.
+    await page.goto('/tasks?view=all');
+    await expect(page.getByTestId('task-table').getByText('Keyword research').first()).toBeVisible();
+    await page.goto('/projects');
+    await expect(page.getByTestId('projects-table').getByText(`${name} SEO Retainer`)).toBeVisible();
+
+    // Onboarding is now 100%.
+    await page.goto(`${clientPath}/onboarding`);
+    await expect(onboarding.getByText('100%')).toBeVisible();
   });
 });

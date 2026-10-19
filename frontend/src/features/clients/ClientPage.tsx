@@ -22,9 +22,13 @@ import {
 import { ClientForm, toClientBody, type ClientFormValues } from '@/features/clients/ClientForm';
 import { useOnboarding } from '@/features/onboarding/api';
 import { OnboardingTab } from '@/features/onboarding/OnboardingTab';
+import { useProjects } from '@/features/projects/api';
+import { ClientProjectsTab } from '@/features/projects/ClientProjectsTab';
 import { Link } from '@/components/ui/Link';
 import { STATUS_TONE } from '@/features/clients/ClientsListPage';
 import { ApiError } from '@/lib/api-client';
+import { useAuth } from '@/lib/auth-context';
+import { can, P } from '@/lib/permissions';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -48,11 +52,14 @@ const TABS: { slug: string; label: string }[] = [
 const crumb = { label: 'Clients', to: '/clients' };
 
 /** Tabs with real content; the rest show their "not yet ported" state. */
-const PORTED_TABS = new Set(['', 'edit', 'activity', 'onboarding']);
+const PORTED_TABS = new Set(['', 'edit', 'activity', 'onboarding', 'projects']);
 
 function TabBar({ id }: { id: string }) {
   return (
-    <nav aria-label="Client sections" className="mb-4 flex gap-0.5 overflow-x-auto border-b border-line">
+    <nav
+      aria-label="Client sections"
+      className="mb-4 flex gap-0.5 overflow-x-auto border-b border-line"
+    >
       {TABS.map((tab) => (
         <NavLink
           key={tab.slug || 'overview'}
@@ -61,7 +68,9 @@ function TabBar({ id }: { id: string }) {
           className={({ isActive }) =>
             cn(
               '-mb-px border-b-2 px-3 py-2 font-medium whitespace-nowrap',
-              isActive ? 'border-accent text-accent-strong' : 'border-transparent text-muted hover:text-fg',
+              isActive
+                ? 'border-accent text-accent-strong'
+                : 'border-transparent text-muted hover:text-fg',
             )
           }
         >
@@ -73,20 +82,34 @@ function TabBar({ id }: { id: string }) {
 }
 
 function NextAction({ client }: { client: ClientDetail }) {
+  const { actor } = useAuth();
   const onboarding = useOnboarding(client.id);
+  const projects = useProjects(client.id);
   const data = onboarding.data;
   if (!data) return null;
   if (data.completed_at) {
+    if (!projects.data || projects.data.length > 0) return null;
+    const canCreate = can(actor?.permissions ?? [], P.projectsCreate);
     return (
-      <Alert tone="ok" title="Onboarding complete">
-        The client is Active. Creating the delivery project arrives with the Projects module.
+      <Alert tone="ok" title="Next required action: Create the delivery project">
+        Onboarding is complete and the client is Active.{' '}
+        {canCreate ? (
+          <Link className="link" to={`/projects/new?client=${client.id}`}>
+            Create project →
+          </Link>
+        ) : (
+          'A Project Manager or Account Manager creates the project.'
+        )}
       </Alert>
     );
   }
   const next = data.steps.find((s) => s.state !== 'done');
   if (!next) return null;
   return (
-    <Alert tone={data.status === 'blocked' ? 'bad' : 'info'} title={`Next required action: ${next.label}`}>
+    <Alert
+      tone={data.status === 'blocked' ? 'bad' : 'info'}
+      title={`Next required action: ${next.label}`}
+    >
       {next.detail || next.hint}{' '}
       <Link className="link" to={`/clients/${client.id}/onboarding`}>
         Open onboarding →
@@ -107,7 +130,10 @@ function TeamPanel({ client }: { client: ClientDetail }) {
           ))}
         </ul>
       ) : (
-        <EmptyState title="No team assigned" description="The team is assigned in onboarding step 10." />
+        <EmptyState
+          title="No team assigned"
+          description="The team is assigned in onboarding step 10."
+        />
       )}
     </Panel>
   );
@@ -125,7 +151,16 @@ function Overview({ client }: { client: ClientDetail }) {
               [
                 'Website',
                 client.website ? (
-                  <a className="link" href={client.website.startsWith('http') ? client.website : `https://${client.website}`} target="_blank" rel="noreferrer noopener">
+                  <a
+                    className="link"
+                    href={
+                      client.website.startsWith('http')
+                        ? client.website
+                        : `https://${client.website}`
+                    }
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
                     {client.website}
                   </a>
                 ) : null,
@@ -136,7 +171,9 @@ function Overview({ client }: { client: ClientDetail }) {
                 client.contact_name || client.contact_email ? (
                   <span>
                     {client.contact_name}{' '}
-                    {client.contact_email ? <span className="code">{client.contact_email}</span> : null}
+                    {client.contact_email ? (
+                      <span className="code">{client.contact_email}</span>
+                    ) : null}
                   </span>
                 ) : null,
               ],
@@ -257,6 +294,7 @@ export function Component() {
       {tab === 'edit' ? <EditTab client={data} /> : null}
       {tab === 'activity' ? <ActivityTab id={data.id} /> : null}
       {tab === 'onboarding' ? <OnboardingTab client={data} /> : null}
+      {tab === 'projects' ? <ClientProjectsTab clientId={data.id} /> : null}
       {!PORTED_TABS.has(tab) ? (
         <Panel flush>
           <EmptyState

@@ -32,6 +32,8 @@ ONBOARDING_MANAGE: Final = "onboarding.manage"
 ONBOARDING_ACCESS_VERIFY: Final = "onboarding.access_verify"
 ONBOARDING_KPI_CONFIRM: Final = "onboarding.kpi_confirm"
 PROJECTS_CREATE: Final = "projects.create"
+# Demo: AM, PM and Finance see every project; others only projects they work on.
+PROJECTS_VIEW_ALL: Final = "projects.view_all"
 TASKS_CREATE: Final = "tasks.create"
 TASKS_REVIEW: Final = "tasks.review"
 APPROVALS_CLIENT_DECISION: Final = "approvals.client_decision"
@@ -52,6 +54,7 @@ CATALOGUE: frozenset[str] = frozenset(
         ONBOARDING_ACCESS_VERIFY,
         ONBOARDING_KPI_CONFIRM,
         PROJECTS_CREATE,
+        PROJECTS_VIEW_ALL,
         TASKS_CREATE,
         TASKS_REVIEW,
         APPROVALS_CLIENT_DECISION,
@@ -92,6 +95,7 @@ DEFAULT_ROLES: Final[tuple[RoleDefinition, ...]] = (
                 ONBOARDING_KPI_CONFIRM,
                 PROJECTS_CREATE,
                 TASKS_CREATE,
+                PROJECTS_VIEW_ALL,
                 APPROVALS_CLIENT_DECISION,
                 SERVICES_MANAGE,
                 FINANCE_VIEW,
@@ -106,6 +110,7 @@ DEFAULT_ROLES: Final[tuple[RoleDefinition, ...]] = (
             {
                 CLIENTS_VIEW_ALL,
                 PROJECTS_CREATE,
+                PROJECTS_VIEW_ALL,
                 TASKS_CREATE,
                 TASKS_REVIEW,
                 ONBOARDING_ACCESS_VERIFY,
@@ -121,7 +126,10 @@ DEFAULT_ROLES: Final[tuple[RoleDefinition, ...]] = (
     ),
     RoleDefinition("employee", "Employee / Specialist"),
     RoleDefinition(
-        "finance", "Finance", "", frozenset({CLIENTS_VIEW_ALL, FINANCE_MANAGE, FINANCE_VIEW})
+        "finance",
+        "Finance",
+        "",
+        frozenset({CLIENTS_VIEW_ALL, PROJECTS_VIEW_ALL, FINANCE_MANAGE, FINANCE_VIEW}),
     ),
 )
 

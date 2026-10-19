@@ -1,10 +1,12 @@
 /**
  * /dashboard. Layout and wording from the clickable demo ("Good day, …", stat
- * tiles, panels). Built from the modules that exist so far (clients, sign-ups);
- * the demo's task, approval, workload and finance tiles arrive with their modules.
+ * tiles, panels). Built from the modules that exist so far (clients, onboarding,
+ * projects & tasks, sign-ups); the approval, workload and finance tiles arrive
+ * with their modules.
  * Every number is counted from the records the signed-in user may see.
  */
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { Badge } from '@/components/ui/Badge';
 import { LinkButton } from '@/components/ui/Button';
@@ -16,6 +18,9 @@ import { useClients, type ClientStatus } from '@/features/clients/api';
 import { STATUS_TONE } from '@/features/clients/ClientsListPage';
 import { useOnboardingBoard } from '@/features/onboarding/api';
 import { ONBOARDING_STATUS } from '@/features/onboarding/OnboardingTab';
+import { useTasks } from '@/features/tasks/api';
+import { TaskDrawer } from '@/features/tasks/TaskDrawer';
+import { TaskTable } from '@/features/tasks/TaskTable';
 import { registrationsKey } from '@/features/team/TeamPage';
 import { Progress } from '@/components/ui/Data';
 import { api, unwrap } from '@/lib/api-client';
@@ -35,7 +40,10 @@ function ClientTiles() {
   const active = useClientCount('active');
   const show = (n: number | undefined) => (n === undefined ? '…' : n);
   return (
-    <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-4" data-testid="dashboard-tiles">
+    <div
+      className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-4"
+      data-testid="dashboard-tiles"
+    >
       <StatCard label="Clients" value={show(total)} hint="All clients you can see" />
       <StatCard label="Contract pending" value={show(pending)} />
       <StatCard label="In onboarding" value={show(onboarding)} />
@@ -92,7 +100,9 @@ function RecentClients({ canCreate }: { canCreate: boolean }) {
                   <td>
                     <Badge tone={STATUS_TONE[client.status]}>{client.status_label}</Badge>
                   </td>
-                  <td className="font-mono text-xs tabular-nums">{formatDate(client.created_at)}</td>
+                  <td className="font-mono text-xs tabular-nums">
+                    {formatDate(client.created_at)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -140,7 +150,10 @@ function OnboardingPipeline() {
                       {row.current_step ? <div className="code">{row.current_step}</div> : null}
                     </td>
                     <td className="w-[40%]">
-                      <Progress value={row.progress} label={`${row.client_name} onboarding progress`} />
+                      <Progress
+                        value={row.progress}
+                        label={`${row.client_name} onboarding progress`}
+                      />
                     </td>
                     <td>
                       <Badge tone={status.tone}>{status.label}</Badge>
@@ -152,6 +165,32 @@ function OnboardingPipeline() {
           </table>
         </div>
       ) : null}
+    </Panel>
+  );
+}
+
+function MyOpenWork({ name }: { name: string }) {
+  const tasks = useTasks('mine');
+  const [open, setOpen] = useState<string | null>(null);
+  return (
+    <Panel
+      title="My open work"
+      flush
+      actions={
+        <Link className="link text-[13px]" to="/tasks">
+          All tasks →
+        </Link>
+      }
+    >
+      {tasks.isPending ? <EmptyState title="Loading…" /> : null}
+      {tasks.data?.length === 0 ? (
+        <EmptyState
+          title="Nothing assigned to you"
+          description={`Tasks assigned to ${name} appear here.`}
+        />
+      ) : null}
+      {tasks.data?.length ? <TaskTable tasks={tasks.data.slice(0, 8)} onOpen={setOpen} /> : null}
+      <TaskDrawer taskId={open} onClose={() => setOpen(null)} />
     </Panel>
   );
 }
@@ -201,6 +240,7 @@ export function Component() {
       {canSeeClients ? <ClientTiles /> : null}
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-4">
+        <MyOpenWork name={actor.fullName} />
         {canSeeClients ? <OnboardingPipeline /> : null}
         {canSeeClients ? <RecentClients canCreate={canCreate} /> : null}
         <Panel title="Quick actions">
@@ -219,6 +259,16 @@ export function Component() {
                 </Link>
               </li>
             ) : null}
+            <li>
+              <Link className="link" to="/projects">
+                Projects
+              </Link>
+            </li>
+            <li>
+              <Link className="link" to="/tasks">
+                Tasks &amp; work
+              </Link>
+            </li>
             {canApprove ? (
               <li>
                 <PendingSignUpsCount />
@@ -234,7 +284,7 @@ export function Component() {
         <Panel title="Coming next">
           <EmptyState
             title="More of the dashboard arrives with each module"
-            description="Open tasks, overdue work, approvals, onboarding pipeline, team workload and finance tiles appear as those modules are ported."
+            description="Approvals, team workload and finance tiles appear as those modules are ported."
           />
         </Panel>
       </div>

@@ -25,6 +25,7 @@ from app.modules.onboarding.models import (
     QuestionnaireLink,
 )
 from app.modules.onboarding.steps import DEFAULT_ACCESS_ITEMS
+from app.modules.projects.models import Project
 from app.platform.identity.models import Role, User, UserRole
 
 #: Who can be on a client's internal team (demo: employees, team leads, project managers).
@@ -161,6 +162,15 @@ class OnboardingRepository:
             .group_by(ClientTeamMember.client_id)
         )
         return {client_id: int(count) for client_id, count in rows.all()}
+
+    async def clients_with_projects(self, client_ids: Sequence[uuid.UUID]) -> set[uuid.UUID]:
+        """Step 13: which of these clients already have a project."""
+        if not client_ids:
+            return set()
+        rows = await self._session.execute(
+            select(Project.client_id).where(Project.client_id.in_(client_ids)).distinct()
+        )
+        return set(rows.scalars())
 
     def _team_candidates(self) -> Select[User]:
         return (
