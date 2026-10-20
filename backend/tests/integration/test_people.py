@@ -17,13 +17,17 @@ pytestmark = pytest.mark.integration
 
 __all__ = ["world"]  # fixture re-export
 
+#: Migration 0010: two renamed, three added (Organization brief §4).
 SEEDED = [
-    "Content Writers Team",
+    "Application Development Team",
+    "Content Team",
     "Design Team",
-    "Development Team",
     "Operations Team",
+    "Performance Marketing Team",
+    "Project Management Team",
     "SEO Team",
     "Social Media Team",
+    "Web Development Team",
 ]
 
 
@@ -32,12 +36,21 @@ async def department(w: World, name: str) -> str:
     return str(next(d["id"] for d in rows if d["name"] == name))
 
 
-async def designation(w: World, name: str) -> str:
+async def designation(w: World, name: str, department_name: str | None = None) -> str:
     rows = (await w.http.get("/api/v1/team/designations")).json()
-    found = next((d["id"] for d in rows if d["name"] == name), None)
+    found = next(
+        (
+            d["id"]
+            for d in rows
+            if d["name"] == name
+            and (department_name is None or (d["department"] or {}).get("name") == department_name)
+        ),
+        None,
+    )
     if found:
         return str(found)
     created = await w.http.post("/api/v1/team/designations", json={"name": name})
+    assert created.status_code == 201, created.text
     return str(created.json()["id"])
 
 
@@ -57,23 +70,58 @@ async def patch(w: World, employee_id: str, **body: Any) -> httpx.Response:
     return await w.http.patch(f"/api/v1/team/employees/{employee_id}", json=body)
 
 
+async def reporting(
+    w: World, employee_id: str, *lines: tuple[str, str] | tuple[str, str, str], **body: Any
+) -> httpx.Response:
+    """PUT the full set of explicit lines: (kind, manager_id[, project_id])."""
+    payload = [
+        {"kind": ln[0], "manager_id": ln[1], **({"project_id": ln[2]} if len(ln) > 2 else {})}
+        for ln in lines
+    ]
+    return await w.http.put(
+        f"/api/v1/team/employees/{employee_id}/reporting", json={"lines": payload, **body}
+    )
+
+
+async def people_admin(w: World, email: str = "vinay@example.com") -> User:
+    """HR (records) plus Organization Admin (placement): what creating staff needs."""
+    user = await w.user(email, "hr_admin")
+    await w.grant(user, "org_admin")
+    return user
+
+
 async def test_departments_and_designations(world: World) -> None:
     hr = await world.user("vinay@example.com", "hr_admin")
+    admin = await world.user("orgadmin@example.com", "org_admin")
     staff = await world.user("jordan@example.com", "employee")
     await world.act_as(staff)
     rows = (await world.http.get("/api/v1/team/departments")).json()
     assert [d["name"] for d in rows] == SEEDED
     assert all(d["head"] is None and d["headcount"] == 0 for d in rows)
+    assert all(d["description"] for d in rows)
     denied = await world.http.post("/api/v1/team/departments", json={"name": "Sales"})
     assert denied.status_code == 403
-    names = {d["name"] for d in (await world.http.get("/api/v1/team/designations")).json()}
-    assert names == {"Founder & CEO", "COO", "Co-Founder", "Project Manager"}
+    titles = (await world.http.get("/api/v1/team/designations")).json()
+    company = {d["name"] for d in titles if d["department"] is None}
+    assert company == {"Founder & CEO", "Co-Founder & COO", "Co-Founder"}
+    pm = next(d for d in titles if d["name"] == "Project Manager")
+    assert pm["department"]["name"] == "Project Management Team"
+    leads = [d["department"]["name"] for d in titles if d["name"] == "Technical Lead"]
+    assert sorted(leads) == ["Application Development Team", "Web Development Team"]
 
+    # HR keeps employee records only; the organisation is the Organization Admin's.
     await world.act_as(hr)
+    assert (
+        await world.http.post("/api/v1/team/departments", json={"name": "Sales"})
+    ).status_code == 403
+
+    await world.act_as(admin)
     sales = (await world.http.post("/api/v1/team/departments", json={"name": "Sales"})).json()
     duplicate = await world.http.post("/api/v1/team/departments", json={"name": "seo team"})
     assert duplicate.status_code == 409
+    await world.act_as(await people_admin(world, "mei.hr@example.com"))
     lead = await employee(world, "Mei Chen", department_id=sales["id"])
+    await world.act_as(admin)
     headed = await world.http.patch(
         f"/api/v1/team/departments/{sales['id']}", json={"head_id": lead["id"]}
     )
@@ -89,19 +137,43 @@ async def test_departments_and_designations(world: World) -> None:
     assert closed.json()["is_active"] is False
     moved = await patch(world, lead["id"], department_id=sales["id"])
     assert error(moved) == "Choose an active department."
+    reopened = await world.http.patch(
+        f"/api/v1/team/departments/{sales['id']}", json={"is_active": True, "name": "Sales Team"}
+    )
+    assert (reopened.json()["is_active"], reopened.json()["name"]) == (True, "Sales Team")
 
-    seo_writer = await world.http.post("/api/v1/team/designations", json={"name": "SEO Writer"})
+    seo = await department(world, "SEO Team")
+    seo_writer = await world.http.post(
+        "/api/v1/team/designations", json={"name": "SEO Writer", "department_id": seo}
+    )
     assert seo_writer.status_code == 201
-    again = await world.http.post("/api/v1/team/designations", json={"name": "seo writer"})
+    assert seo_writer.json()["department"]["name"] == "SEO Team"
+    again = await world.http.post(
+        "/api/v1/team/designations", json={"name": "seo writer", "department_id": seo}
+    )
     assert again.status_code == 409
+    elsewhere = await world.http.post(
+        "/api/v1/team/designations",
+        json={"name": "SEO Writer", "department_id": await department(world, "Content Team")},
+    )
+    assert elsewhere.status_code == 201  # the same title in another department
     renamed = await world.http.patch(
         f"/api/v1/team/designations/{seo_writer.json()['id']}", json={"name": "SEO Copywriter"}
     )
     assert renamed.json()["name"] == "SEO Copywriter"
+    actions = {
+        a
+        for (a,) in (
+            await world.session.execute(
+                select(AuditLog.action).where(AuditLog.actor_user_id == admin.id)
+            )
+        ).all()
+    }
+    assert {"department.created", "department.updated", "designation.created"} <= actions
 
 
 async def test_create_directory_and_visibility(world: World) -> None:
-    hr = await world.user("vinay@example.com", "hr_admin")
+    hr = await people_admin(world)
     ceo_user = await world.user("hanumesh@example.com", "super_admin")
     lead_user = await world.user("mei@example.com", "team_lead")
     dev_user = await world.user("jordan@example.com", "employee")
@@ -134,7 +206,7 @@ async def test_create_directory_and_visibility(world: World) -> None:
         department_id=seo,
         manager_id=lead["id"],
         user_id=str(dev_user.id),
-        designation_id=await designation(world, "SEO Specialist"),
+        designation_id=await designation(world, "SEO Executive", "SEO Team"),
     )
     other = await employee(world, "Sam Lee", user_id=str(other_user.id))
     assert dev["code"] == "DD-0003"
@@ -187,29 +259,36 @@ async def test_create_directory_and_visibility(world: World) -> None:
     await world.act_as(dev_user)
     assert (await get(world, lead["id"]))["employment"] is None  # not upward
 
-    # Dotted lines and department heads see employment too.
+    # Functional managers and department heads see employment too.
     await world.act_as(hr)
-    dotted = await world.http.post(
-        f"/api/v1/team/employees/{dev['id']}/dotted-lines", json={"manager_id": other["id"]}
+    keep = ("direct_manager", lead["id"])
+    added = await reporting(world, dev["id"], keep, ("functional_manager", other["id"]))
+    assert added.status_code == 200, added.text
+    again = await reporting(
+        world,
+        dev["id"],
+        keep,
+        ("functional_manager", other["id"]),
+        ("functional_manager", other["id"]),
     )
-    assert dotted.json()["employment"]["dotted_lines"][0]["manager"]["full_name"] == "Sam Lee"
-    again = await world.http.post(
-        f"/api/v1/team/employees/{dev['id']}/dotted-lines", json={"manager_id": other["id"]}
-    )
-    assert again.status_code == 409
+    assert error(again) == "Functional manager: Sam Lee is listed twice."
     await world.act_as(other_user)
-    assert (await get(world, dev["id"]))["employment"] is not None
+    detail = await get(world, dev["id"])
+    assert {(r["kind"], r["manager"]["full_name"]) for r in detail["employment"]["reporting"]} >= {
+        ("functional_manager", "Sam Lee")
+    }
     await world.act_as(hr)
-    line_id = dotted.json()["employment"]["dotted_lines"][0]["id"]
-    ended = await world.http.delete(f"/api/v1/team/employees/{dev['id']}/dotted-lines/{line_id}")
-    assert ended.json()["employment"]["dotted_lines"] == []
+    assert (await reporting(world, dev["id"], keep)).status_code == 200
+    await world.act_as(other_user)
+    assert (await get(world, dev["id"]))["employment"] is None
+    await world.act_as(await world.user("org@example.com", "org_admin"))
     await world.http.patch(f"/api/v1/team/departments/{seo}", json={"head_id": other["id"]})
     await world.act_as(other_user)
     assert (await get(world, dev["id"]))["employment"] is not None
 
 
 async def test_reporting_changes_history_and_rules(world: World) -> None:
-    hr = await world.user("vinay@example.com", "hr_admin")
+    hr = await people_admin(world)
     await world.act_as(hr)
     ceo = await employee(world, "Hanumesh JK")
     coo = await employee(world, "Vinay Kumar", manager_id=ceo["id"])
@@ -223,23 +302,22 @@ async def test_reporting_changes_history_and_rules(world: World) -> None:
         "An employee can't report to themselves."
     )
     moved = await patch(
-        world,
-        pm["id"],
-        manager_id=ceo["id"],
-        status="active",
-        work_arrangement="remote",
-        leave_approver_id=coo["id"],
+        world, pm["id"], manager_id=ceo["id"], status="active", work_arrangement="remote"
     )
     assert moved.status_code == 200, moved.text
-    detail = moved.json()
+    approver = await reporting(
+        world, pm["id"], ("direct_manager", ceo["id"]), ("leave_approver", coo["id"])
+    )
+    assert approver.status_code == 200, approver.text
+    detail = await get(world, pm["id"])
     assert detail["manager"]["full_name"] == "Hanumesh JK"
     assert detail["employment"]["effective_leave_approver"]["full_name"] == "Vinay Kumar"
     unmanaged = (await patch(world, pm["id"], manager_id=None)).json()
     assert unmanaged["manager"] is None
     exited = await patch(world, pm["id"], status="exited")
     assert error(exited) == "Exits go through offboarding, which arrives in a later phase."
-    own_approver = await patch(world, pm["id"], leave_approver_id=pm["id"])
-    assert error(own_approver) == "An employee can't approve their own leave."
+    own_approver = await reporting(world, pm["id"], ("leave_approver", pm["id"]))
+    assert error(own_approver) == "Leave approver: an employee can't report to themselves."
     assert (await patch(world, pm["id"], full_name="  ")).status_code == 422
 
     history = (await world.http.get(f"/api/v1/team/employees/{pm['id']}/history")).json()
@@ -248,6 +326,7 @@ async def test_reporting_changes_history_and_rules(world: World) -> None:
     assert "Reporting manager: Hanumesh JK → —" in summaries
     assert "Status: Onboarding → Active" in summaries
     assert "Work arrangement: — → Remote" in summaries
+    assert "Reporting changed — Leave approver: Vinay Kumar added" in summaries
     assert summaries[-1] == "Employee record created: reports to Vinay Kumar"
     assert {h["actor"] for h in history} == {"Vinay"}
     assert (await world.http.get("/api/v1/team/employees/" + "0" * 32)).status_code == 404

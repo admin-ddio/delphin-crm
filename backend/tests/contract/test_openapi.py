@@ -66,7 +66,10 @@ def test_every_slot_has_its_files() -> None:
     assert on_disk == sorted(EXPECTED_SLOTS)
     for slot in EXPECTED_SLOTS:
         for filename in SLOT_FILES:
-            assert (MODULES_DIR / slot / filename).is_file(), f"{slot}/{filename} missing"
+            # A layer may grow into a package (e.g. team/service/).
+            package = MODULES_DIR / slot / filename.removesuffix(".py") / "__init__.py"
+            present = (MODULES_DIR / slot / filename).is_file() or package.is_file()
+            assert present, f"{slot}/{filename} missing"
 
 
 def test_every_operation_is_tagged_and_named(client: TestClient) -> None:

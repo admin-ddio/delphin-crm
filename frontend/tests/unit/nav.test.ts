@@ -34,7 +34,7 @@ describe('navigation model', () => {
       ['Clients', ['CRM & Clients', 'Client Onboarding']],
       ['Delivery', ['Projects', 'Tasks & Work', 'Approvals']],
       ['Services', ['Services & Retainers']],
-      ['People', ['Employees', 'Departments & Org chart']],
+      ['People', ['Employees', 'Organization & Roles']],
       ['Organisation', ['Finance & Billing', 'Team & Roles', 'Activity log']],
     ]);
   });

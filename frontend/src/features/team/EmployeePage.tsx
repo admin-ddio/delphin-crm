@@ -10,7 +10,7 @@ import { useParams, useSearchParams } from 'react-router';
 
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button, LinkButton } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Card';
 import { KeyValue, Tabs, Timeline } from '@/components/ui/Data';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -23,9 +23,7 @@ import {
   EMPLOYEE_STATUS,
   EMPLOYMENT_TYPES,
   WORK_ARRANGEMENTS,
-  useDottedLines,
   useEmployee,
-  useEmployees,
   useEmploymentHistory,
   useUpdateEmployee,
   useUpdatePersonal,
@@ -33,6 +31,7 @@ import {
   type PersonalUpdate,
 } from '@/features/team/api';
 import { EmploymentForm, toBody, type EmploymentValues } from '@/features/team/EmploymentForm';
+import { LineLegend, RelationList } from '@/features/team/org/Relations';
 import { api, ApiError, unwrap } from '@/lib/api-client';
 import { formatDate, formatDateTime } from '@/lib/format';
 
@@ -87,10 +86,24 @@ function Overview({ employee }: { employee: EmployeeDetail }) {
             ['Department', employee.department?.name],
             ['Status', employee.status_label],
             ['Official e-mail', employee.official_email],
-            ['Reporting manager', person(employee.manager)],
+            ['Direct manager', person(employee.manager)],
             ...(e
               ? ([
                   ['Department head', person(e.department_head)],
+                  [
+                    'Functional manager',
+                    e.reporting
+                      .filter((r) => r.kind === 'functional_manager')
+                      .map((r) => r.manager.full_name)
+                      .join(', ') || null,
+                  ],
+                  [
+                    'Project manager',
+                    e.reporting
+                      .filter((r) => r.kind === 'project_manager')
+                      .map((r) => r.manager.full_name + (r.project ? ` (${r.project.name})` : ''))
+                      .join(', ') || null,
+                  ],
                   ['Joining date', e.joining_date ? formatDate(e.joining_date) : null],
                   [
                     'Work arrangement',
@@ -226,80 +239,25 @@ function Personal({ employee }: { employee: EmployeeDetail }) {
   );
 }
 
-function DottedLines({ employee }: { employee: EmployeeDetail }) {
-  const { add, end } = useDottedLines(employee.id);
-  const people = useEmployees();
-  const { toast } = useToast();
-  const id = useId();
-  const [manager, setManager] = useState('');
-  const lines = employee.employment?.dotted_lines ?? [];
-  const run = async (action: () => Promise<unknown>, done: string) => {
-    try {
-      await action();
-      toast({ title: done });
-    } catch (error) {
-      toast({ title: errorMessage(error), tone: 'error' });
-    }
-  };
+/** Every relationship that applies, explicit or inherited from the department. */
+function ReportingRelations({ employee }: { employee: EmployeeDetail }) {
+  const relations = employee.employment?.reporting ?? [];
   return (
     <Panel
-      title="Dotted-line reporting"
-      description="Secondary managers who also oversee this person's work."
+      title="Reporting relationships"
+      description="Delivery, functional and approval lines. Department defaults apply unless set on the employee."
+      actions={
+        employee.permissions.manage_reporting ? (
+          <LinkButton size="sm" to={`/team/teams?tab=reporting&employee=${employee.id}`}>
+            Edit reporting
+          </LinkButton>
+        ) : null
+      }
     >
-      {lines.length ? (
-        <ul className="mb-3 flex flex-col gap-1.5">
-          {lines.map((line) => (
-            <li key={line.id} className="flex items-center gap-2">
-              {person(line.manager)}
-              <span className="code">since {formatDate(line.starts_on)}</span>
-              {employee.permissions.manage ? (
-                <Button
-                  size="sm"
-                  onClick={() => void run(() => end.mutateAsync(line.id), 'Dotted line ended.')}
-                >
-                  End
-                </Button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mb-3 text-muted">None.</p>
-      )}
-      {employee.permissions.manage ? (
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="label">
-            <label htmlFor={id}>Add dotted line to</label>
-            <select
-              id={id}
-              className="input"
-              value={manager}
-              onChange={(e) => setManager(e.target.value)}
-            >
-              <option value="">Choose a person…</option>
-              {people.data
-                ?.filter((p) => p.id !== employee.id)
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.full_name} ({p.code})
-                  </option>
-                ))}
-            </select>
-          </div>
-          <Button
-            size="sm"
-            disabled={!manager || add.isPending}
-            onClick={() =>
-              void run(async () => {
-                await add.mutateAsync(manager);
-                setManager('');
-              }, 'Dotted line added.')
-            }
-          >
-            Add
-          </Button>
-        </div>
-      ) : null}
+      <RelationList relations={relations} />
+      <div className="mt-3">
+        <LineLegend />
+      </div>
     </Panel>
   );
 }
@@ -320,7 +278,6 @@ function Employment({ employee }: { employee: EmployeeDetail }) {
     status: employee.status,
     joining_date: e.joining_date ?? '',
     manager_id: employee.manager?.id ?? '',
-    leave_approver_id: e.leave_approver?.id ?? '',
     user_id: employee.user_id ?? '',
   };
   return (
@@ -328,7 +285,7 @@ function Employment({ employee }: { employee: EmployeeDetail }) {
       <Panel
         title="Employment"
         actions={
-          employee.permissions.manage && !editing ? (
+          (employee.permissions.manage || employee.permissions.manage_reporting) && !editing ? (
             <Button size="sm" onClick={() => setEditing(true)}>
               Edit employment
             </Button>
@@ -339,6 +296,8 @@ function Employment({ employee }: { employee: EmployeeDetail }) {
           <EmploymentForm
             initial={initial}
             employeeId={employee.id}
+            placement={employee.permissions.manage_reporting}
+            record={employee.permissions.manage}
             currentAccount={
               employee.user_id ? { id: employee.user_id, label: 'Current account' } : undefined
             }
@@ -346,7 +305,12 @@ function Employment({ employee }: { employee: EmployeeDetail }) {
             onCancel={() => setEditing(false)}
             onSubmit={async (values) => {
               try {
-                await update.mutateAsync(toBody(values));
+                await update.mutateAsync(
+                  toBody(values, {
+                    placement: employee.permissions.manage_reporting,
+                    record: employee.permissions.manage,
+                  }),
+                );
                 toast({ title: 'Employment updated.' });
                 setEditing(false);
               } catch (error) {
@@ -366,17 +330,12 @@ function Employment({ employee }: { employee: EmployeeDetail }) {
                 WORK_ARRANGEMENTS.find((w) => w.value === e.work_arrangement)?.label,
               ],
               ['Joining date', e.joining_date ? formatDate(e.joining_date) : null],
-              ['Reporting manager', person(employee.manager)],
+              ['Direct manager', person(employee.manager)],
               ['Department head', person(e.department_head)],
               [
                 'Leave approver',
-                e.leave_approver ? (
-                  person(e.leave_approver)
-                ) : e.effective_leave_approver ? (
-                  <span>
-                    {person(e.effective_leave_approver)}{' '}
-                    <span className="text-muted">(reporting manager)</span>
-                  </span>
+                e.effective_leave_approver ? (
+                  person(e.effective_leave_approver)
                 ) : (
                   <span className="text-muted">Not set</span>
                 ),
@@ -386,7 +345,7 @@ function Employment({ employee }: { employee: EmployeeDetail }) {
           />
         )}
       </Panel>
-      <DottedLines employee={employee} />
+      <ReportingRelations employee={employee} />
     </div>
   );
 }

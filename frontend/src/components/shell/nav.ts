@@ -51,7 +51,7 @@ export const navGroups: NavGroup[] = [
     label: 'People',
     items: [
       { label: 'Employees', href: '/team/employees' },
-      { label: 'Departments & Org chart', href: '/team/teams' },
+      { label: 'Organization & Roles', href: '/team/teams' },
     ],
   },
   {

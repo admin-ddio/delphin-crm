@@ -22,7 +22,7 @@ export const teamRouteSpecs: readonly RouteSpec[] = [
   { path: '/team/employees/:id', title: 'Employee', module: 'team', layout: 'app', ported: true },
   {
     path: '/team/teams',
-    title: 'Departments & org chart',
+    title: 'Organization & Role Settings',
     module: 'team',
     layout: 'app',
     ported: true,

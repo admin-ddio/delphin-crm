@@ -602,34 +602,40 @@ test.describe('onboarding', () => {
   });
 });
 
-test.describe('people (HR phase 1)', () => {
+test.describe('people and organization settings', () => {
   test.use({ storageState: AUTH_FILE });
 
-  test('departments, new employees, reporting lines, profile and org chart', async ({ page }) => {
-    test.setTimeout(150_000);
+  test('employees, reporting lines with preview, org chart, roles and audit log', async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
     const stamp = Date.now();
-    const lead = `Vinay Kumar ${stamp}`;
+    const lead = `Mei Lead ${stamp}`;
     const member = `Jordan Blake ${stamp}`;
 
-    // The six departments exist from the start.
-    await page.goto('/team/teams');
+    // The nine departments exist from the start, with their purposes.
+    await page.goto('/team/teams?tab=departments');
     const departments = page.getByTestId('departments-table');
     for (const name of [
-      'SEO Team',
+      'Content Team',
       'Design Team',
+      'SEO Team',
       'Social Media Team',
-      'Content Writers Team',
-      'Development Team',
+      'Performance Marketing Team',
+      'Web Development Team',
+      'Application Development Team',
+      'Project Management Team',
       'Operations Team',
     ]) {
       await expect(departments.getByRole('link', { name, exact: true })).toBeVisible();
     }
+    await shot(page, 'org-departments');
 
-    // Create a COO heading the SEO Team, then a specialist reporting to them.
+    // An SEO manager, then a specialist reporting to them.
     await page.goto('/team/employees/new');
     await page.getByLabel('Full legal name *').fill(lead);
     await page.getByLabel('Department').selectOption({ label: 'SEO Team' });
-    await page.getByLabel('Designation').selectOption({ label: 'COO' });
+    await page.getByLabel('Designation').selectOption({ label: 'SEO Manager' });
     await page.getByLabel('Employment status').selectOption({ label: 'Active' });
     await page.getByRole('button', { name: 'Create employee' }).click();
     await expect(page.getByRole('heading', { level: 1 }).getByText(lead)).toBeVisible();
@@ -639,15 +645,19 @@ test.describe('people (HR phase 1)', () => {
     await page.getByLabel('Full legal name *').fill(member);
     await page.getByLabel('Official e-mail').fill(`jordan-${stamp}@delphin.example`);
     await page.getByLabel('Department').selectOption({ label: 'SEO Team' });
-    await pickOption(page.getByLabel('Reporting manager'), lead);
+    await page.getByLabel('Designation').selectOption({ label: 'SEO Executive' });
+    await pickOption(page.getByLabel('Direct manager'), lead);
     await page.getByLabel('Work arrangement').selectOption({ label: 'Hybrid' });
     await page.getByRole('button', { name: 'Create employee' }).click();
     await expect(page.getByRole('heading', { level: 1 }).getByText(member)).toBeVisible();
-    await expect(page.getByRole('link', { name: lead })).toBeVisible();
+    await expect(page.getByRole('link', { name: lead }).first()).toBeVisible();
 
-    // Employment: leave approver defaults to the manager; a status change is recorded.
+    // Employment: every relationship that applies; a status change is recorded.
     await page.getByRole('tab', { name: 'Employment' }).click();
-    await expect(page.getByText('(reporting manager)')).toBeVisible();
+    const relations = page.locator('section').filter({ hasText: 'Reporting relationships' });
+    await expect(relations.getByText('Direct manager:')).toBeVisible();
+    await expect(relations.getByText('Leave approver:')).toBeVisible();
+    await expect(relations.getByText('(via the direct manager)').first()).toBeVisible();
     await page.getByRole('button', { name: 'Edit employment' }).click();
     await page.getByLabel('Employment status').selectOption({ label: 'On probation' });
     await page.getByRole('button', { name: 'Save employment' }).click();
@@ -663,25 +673,78 @@ test.describe('people (HR phase 1)', () => {
     await page.getByRole('button', { name: 'Save personal details' }).click();
     await expect(page.getByText('Alex Blake')).toBeVisible();
 
-    // Make the COO head of the SEO Team.
-    await page.goto('/team/teams');
+    // Make the manager head of the SEO Team.
+    await page.goto('/team/teams?tab=departments');
     await page.getByRole('button', { name: 'Edit SEO Team' }).click();
     const dialog = page.getByRole('dialog', { name: 'Edit SEO Team' });
     await pickOption(dialog.getByLabel('Department head'), lead);
     await dialog.getByRole('button', { name: 'Save' }).click();
     const seoRow = departments.getByRole('row').filter({ hasText: 'SEO Team' });
-    await expect(seoRow.getByRole('link', { name: lead })).toBeVisible();
+    await expect(seoRow.getByText(lead)).toBeVisible();
 
-    // Org chart: the specialist sits under the COO.
-    await page.getByRole('tab', { name: 'Org chart' }).click();
+    // Reporting: add a functional manager, preview the impact, then save.
+    await page.goto('/team/teams?tab=reporting');
+    await pickOption(page.getByLabel('Employee', { exact: true }), member);
+    await expect(page.getByText('What applies now')).toBeVisible();
+    await page.getByRole('button', { name: 'Add relationship' }).click();
+    await page.getByLabel('Relationship 2', { exact: true }).selectOption({ label: 'Performance reviewer' });
+    await pickOption(page.getByLabel('Reports to').nth(1), lead);
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+    await page.getByRole('button', { name: 'Preview changes' }).click();
+    const preview = page.getByTestId('reporting-preview');
+    await expect(preview.getByText(`Performance reviewer: ${lead}`).first()).toBeVisible();
+    await expect(preview.getByTestId('chart-preview')).toBeVisible();
+    await shot(page, 'org-reporting-preview');
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByText(`Reporting for ${member} saved.`)).toBeVisible();
+    await expect(
+      page.getByTestId('reporting-history').getByText('Performance reviewer'),
+    ).toBeVisible();
+
+    // A loop is refused before anything is saved.
+    await pickOption(page.getByLabel('Employee', { exact: true }), lead);
+    await expect(page.getByText(`Edit relationships: ${lead}`)).toBeVisible();
+    await page.getByRole('button', { name: 'Add relationship' }).click();
+    await pickOption(page.getByLabel('Reports to').last(), member);
+    await page.getByRole('button', { name: 'Preview changes' }).click();
+    await expect(page.getByText(/That would create a reporting loop/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
+
+    // Org chart: executive and delivery views, labelled lines, filters.
+    await page.goto('/team/teams');
     const chart = page.getByTestId('org-chart');
-    const leadNode = chart
-      .locator('li')
-      .filter({ has: page.getByRole('link', { name: lead, exact: true }) })
-      .first();
-    await expect(leadNode.getByRole('link', { name: member })).toBeVisible();
+    const seo = chart.getByRole('region', { name: 'SEO Team' });
+    await expect(seo.getByRole('link', { name: member })).toBeVisible();
+    await expect(seo.getByText('Direct manager:').first()).toBeVisible();
+    await page.getByLabel('Reporting type').selectOption({ label: 'Performance reviewer' });
+    await expect(seo.getByText('Performance reviewer:')).toBeVisible();
+    await shot(page, 'org-chart');
+    await page.getByRole('tab', { name: 'Project delivery' }).click();
+    await shot(page, 'org-delivery');
 
-    // Directory search and department filter.
+    // Roles: the matrix, and a new role limited to the organisation module.
+    await page.goto('/team/teams?tab=roles');
+    await expect(page.getByTestId('permission-matrix')).toBeVisible();
+    await page.getByRole('button', { name: 'New role' }).click();
+    const roleDialog = page.getByRole('dialog', { name: 'New role' });
+    await roleDialog.getByLabel('Key *').fill(`viewer_${stamp}`);
+    await roleDialog.getByLabel('Name *').fill(`Org Viewer ${stamp}`);
+    await roleDialog.getByLabel('View organization structure').check();
+    await roleDialog.getByRole('button', { name: 'Save role' }).click();
+    await expect(page.getByText(`Role Org Viewer ${stamp} created.`)).toBeVisible();
+    await expect(
+      page.getByTestId('permission-matrix').getByText(`Org Viewer ${stamp}`, { exact: true }),
+    ).toBeVisible();
+    await shot(page, 'org-roles');
+
+    // Audit log.
+    await page.goto('/team/teams?tab=audit');
+    const audit = page.getByTestId('org-audit');
+    await expect(audit.getByText('Reporting changed').first()).toBeVisible();
+    await expect(audit.getByText('Role created').first()).toBeVisible();
+    await shot(page, 'org-audit');
+
+    // Directory search.
     await page.goto('/team/employees');
     await page.getByLabel('Search').fill(`jordan-${stamp}`);
     const table = page.getByTestId('employees-table');

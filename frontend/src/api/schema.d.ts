@@ -1169,7 +1169,7 @@ export interface paths {
         };
         /**
          * List Departments
-         * @description Every department with its head and current headcount.
+         * @description Every department with its owners, head, delivery manager and headcount.
          */
         get: operations["team_list_departments"];
         put?: never;
@@ -1196,7 +1196,8 @@ export interface paths {
         head?: never;
         /**
          * Update Department
-         * @description Rename, set the head, or (de)activate (only when it has no employees).
+         * @description `org.departments.manage`. Rename, set owners / head / delivery manager, or
+         *     (de)activate (deactivating only when it has no employees).
          */
         patch: operations["team_update_department"];
         trace?: never;
@@ -1245,13 +1246,13 @@ export interface paths {
         };
         /**
          * List Employees
-         * @description The employee directory (everyone signed in), alphabetical.
+         * @description The employee directory (`org.directory.view`), alphabetical.
          */
         get: operations["team_list_employees"];
         put?: never;
         /**
          * Create Employee
-         * @description `hr.manage`. Codes are DD-0001, DD-0002…
+         * @description `hr.manage` (placement fields also `org.reporting.manage`). Codes are DD-0001…
          */
         post: operations["team_create_employee"];
         delete?: never;
@@ -1299,43 +1300,10 @@ export interface paths {
         head?: never;
         /**
          * Update Employee
-         * @description `hr.manage`. Partial; `manager_id` replaces the direct manager (history kept).
+         * @description Partial. HR fields need `hr.manage`; department, designation, executive flag and
+         *     `manager_id` need `org.reporting.manage` (the direct manager is replaced, history kept).
          */
         patch: operations["team_update_employee"];
-        trace?: never;
-    };
-    "/api/v1/team/employees/{employee_id}/dotted-lines": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Add Dotted Line */
-        post: operations["team_add_dotted_line"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/team/employees/{employee_id}/dotted-lines/{line_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** End Dotted Line */
-        delete: operations["team_end_dotted_line"];
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/api/v1/team/employees/{employee_id}/history": {
@@ -1376,6 +1344,111 @@ export interface paths {
          * @description The employee themselves, or `hr.manage`.
          */
         patch: operations["team_update_personal"];
+        trace?: never;
+    };
+    "/api/v1/team/employees/{employee_id}/reporting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Reporting
+         * @description `org.view`. Open lines, effective relationships (with department defaults), history.
+         */
+        get: operations["team_get_reporting"];
+        /**
+         * Change Reporting
+         * @description `org.reporting.manage` (or `org.projects.assign` for Project Manager lines only).
+         *     `lines` is the full set of open lines; missing ones end on `effective_on`.
+         */
+        put: operations["team_change_reporting"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/employees/{employee_id}/reporting/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Reporting
+         * @description Validate a change and return the chart as it would be. Saves nothing.
+         */
+        post: operations["team_preview_reporting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/org-audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Org Audit
+         * @description `org.audit.view`. Departments, designations, reporting, roles; newest first.
+         */
+        get: operations["team_org_audit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/org-chart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Org Chart
+         * @description `org.view`. Executives, departments with members and relationships, delivery groups.
+         */
+        get: operations["team_org_chart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/project-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Project Options
+         * @description Projects that Project Manager lines can point at.
+         */
+        get: operations["team_project_options"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/team/registrations": {
@@ -1426,6 +1499,90 @@ export interface paths {
         put?: never;
         /** Reject Registration */
         post: operations["team_reject_registration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Roles
+         * @description `org.roles.manage` or `org.roles.assign`. The permission matrix.
+         */
+        get: operations["team_list_roles"];
+        put?: never;
+        /**
+         * Create Role
+         * @description `org.roles.manage`. Only permissions the actor holds can be granted.
+         */
+        post: operations["team_create_role"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/roles/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Role
+         * @description `org.roles.manage`. Not Super Admin, not a role the actor holds, nothing above them.
+         */
+        patch: operations["team_update_role"];
+        trace?: never;
+    };
+    "/api/v1/team/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List User Roles
+         * @description `org.roles.assign`. Sign-in accounts and their roles.
+         */
+        get: operations["team_list_user_roles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/users/{user_id}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set User Roles
+         * @description `org.roles.assign`. Never one's own roles; only roles within the actor's authority.
+         */
+        put: operations["team_set_user_roles"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1736,6 +1893,56 @@ export interface components {
         CancelIn: {
             /** Reason */
             reason?: string | null;
+        };
+        /** ChartDepartment */
+        ChartDepartment: {
+            delivery_manager: components["schemas"]["PersonRef"] | null;
+            /** Description */
+            description: string | null;
+            head: components["schemas"]["PersonRef"] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Issues */
+            issues: string[];
+            /** Members */
+            members: components["schemas"]["ChartMember"][];
+            /** Name */
+            name: string;
+            /** Owners */
+            owners: components["schemas"]["PersonRef"][];
+        };
+        /** ChartMember */
+        ChartMember: {
+            /** Code */
+            code: string;
+            /** Department Id */
+            department_id: string | null;
+            designation: components["schemas"]["Ref"] | null;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Executive */
+            is_executive: boolean;
+            /** Issues */
+            issues: string[];
+            /** Relations */
+            relations: components["schemas"]["Relation"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "onboarding" | "probation" | "active" | "notice" | "on_hold" | "exited";
+            /** Status Label */
+            status_label: string;
         };
         /** Choice */
         Choice: {
@@ -2086,17 +2293,36 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** DeliveryGroup */
+        DeliveryGroup: {
+            manager: components["schemas"]["PersonRef"];
+            /** Members */
+            members: components["schemas"]["PersonRef"][];
+            /** Projects */
+            projects: components["schemas"]["DeliveryProject"][];
+        };
+        /** DeliveryProject */
+        DeliveryProject: {
+            /** Members */
+            members: components["schemas"]["PersonRef"][];
+            project: components["schemas"]["ProjectRef"];
+        };
         /** DepartmentIn */
         DepartmentIn: {
+            /** Delivery Manager Id */
+            delivery_manager_id?: string | null;
             /** Description */
             description?: string | null;
             /** Head Id */
             head_id?: string | null;
             /** Name */
             name: string;
+            /** Owner Ids */
+            owner_ids?: string[];
         };
         /** DepartmentOut */
         DepartmentOut: {
+            delivery_manager: components["schemas"]["PersonRef"] | null;
             /** Description */
             description: string | null;
             head: components["schemas"]["PersonRef"] | null;
@@ -2111,9 +2337,17 @@ export interface components {
             is_active: boolean;
             /** Name */
             name: string;
+            /** Owners */
+            owners: components["schemas"]["PersonRef"][];
         };
-        /** DepartmentUpdate */
+        /**
+         * DepartmentUpdate
+         * @description Partial. `owner_ids` replaces the owners; null `head_id` / `delivery_manager_id`
+         *     clears them; `is_active` deactivates (only when empty) or reactivates.
+         */
         DepartmentUpdate: {
+            /** Delivery Manager Id */
+            delivery_manager_id?: string | null;
             /** Description */
             description?: string | null;
             /** Head Id */
@@ -2122,14 +2356,19 @@ export interface components {
             is_active?: boolean | null;
             /** Name */
             name?: string | null;
+            /** Owner Ids */
+            owner_ids?: string[] | null;
         };
         /** DesignationIn */
         DesignationIn: {
+            /** Department Id */
+            department_id?: string | null;
             /** Name */
             name: string;
         };
         /** DesignationOut */
         DesignationOut: {
+            department: components["schemas"]["Ref"] | null;
             /** Headcount */
             headcount: number;
             /**
@@ -2144,6 +2383,8 @@ export interface components {
         };
         /** DesignationUpdate */
         DesignationUpdate: {
+            /** Department Id */
+            department_id?: string | null;
             /** Is Active */
             is_active?: boolean | null;
             /** Name */
@@ -2194,28 +2435,6 @@ export interface components {
             /** Folder Id */
             folder_id?: string | null;
         };
-        /** DottedLine */
-        DottedLine: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            manager: components["schemas"]["PersonRef"];
-            /**
-             * Starts On
-             * Format: date
-             */
-            starts_on: string;
-        };
-        /** DottedLineIn */
-        DottedLineIn: {
-            /**
-             * Manager Id
-             * Format: uuid
-             */
-            manager_id: string;
-        };
         /** EligibleClient */
         EligibleClient: {
             /** Code */
@@ -2246,8 +2465,6 @@ export interface components {
             full_name: string;
             /** Joining Date */
             joining_date?: string | null;
-            /** Leave Approver Id */
-            leave_approver_id?: string | null;
             /** Manager Id */
             manager_id?: string | null;
             /** Official Email */
@@ -2286,6 +2503,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Is Executive */
+            is_executive: boolean;
             /** Is Me */
             is_me: boolean;
             manager: components["schemas"]["PersonRef"] | null;
@@ -2318,6 +2537,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Is Executive */
+            is_executive: boolean;
             /** Is Me */
             is_me: boolean;
             manager: components["schemas"]["PersonRef"] | null;
@@ -2341,10 +2562,14 @@ export interface components {
             edit_personal: boolean;
             /** Manage */
             manage: boolean;
+            /** Manage Reporting */
+            manage_reporting: boolean;
         };
         /**
          * EmployeeUpdate
-         * @description Partial: only fields sent are changed. `manager_id: null` removes the manager.
+         * @description Partial: only fields sent are changed. Department, designation, `is_executive` and
+         *     `manager_id` (null removes the direct manager) need `org.reporting.manage`; the
+         *     rest `hr.manage`.
          */
         EmployeeUpdate: {
             /** Department Id */
@@ -2355,10 +2580,10 @@ export interface components {
             employment_type?: ("full_time" | "part_time" | "intern" | "contractor" | "consultant") | null;
             /** Full Name */
             full_name?: string | null;
+            /** Is Executive */
+            is_executive?: boolean | null;
             /** Joining Date */
             joining_date?: string | null;
-            /** Leave Approver Id */
-            leave_approver_id?: string | null;
             /** Manager Id */
             manager_id?: string | null;
             /** Official Email */
@@ -2378,8 +2603,6 @@ export interface components {
          */
         Employment: {
             department_head: components["schemas"]["PersonRef"] | null;
-            /** Dotted Lines */
-            dotted_lines: components["schemas"]["DottedLine"][];
             effective_leave_approver: components["schemas"]["PersonRef"] | null;
             /**
              * Employment Type
@@ -2390,7 +2613,8 @@ export interface components {
             has_account: boolean;
             /** Joining Date */
             joining_date: string | null;
-            leave_approver: components["schemas"]["PersonRef"] | null;
+            /** Reporting */
+            reporting: components["schemas"]["Relation"][];
             /** Work Arrangement */
             work_arrangement: ("remote" | "hybrid" | "office") | null;
         };
@@ -2623,6 +2847,18 @@ export interface components {
             target_date?: string | null;
             /** Unit */
             unit?: string | null;
+        };
+        /** LineChange */
+        LineChange: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "direct_manager" | "functional_manager" | "project_manager" | "department_head" | "leave_approver" | "performance_reviewer" | "executive_escalation";
+            /** Kind Label */
+            kind_label: string;
+            manager: components["schemas"]["PersonRef"];
+            project: components["schemas"]["ProjectRef"] | null;
         };
         /** MeetingIn */
         MeetingIn: {
@@ -2881,6 +3117,46 @@ export interface components {
             /** Version */
             version: number;
         };
+        /** OrgAuditEntry */
+        OrgAuditEntry: {
+            /** Action */
+            action: string;
+            /** Actor */
+            actor: string | null;
+            /** Changes */
+            changes: {
+                [key: string]: unknown;
+            };
+            /** Context */
+            context: {
+                [key: string]: unknown;
+            };
+            /** Entity Id */
+            entity_id: string | null;
+            /** Entity Type */
+            entity_type: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+        };
+        /** OrgChart */
+        OrgChart: {
+            /** Delivery */
+            delivery: components["schemas"]["DeliveryGroup"][];
+            /** Departments */
+            departments: components["schemas"]["ChartDepartment"][];
+            /** Executives */
+            executives: components["schemas"]["ChartMember"][];
+            /** Unplaced */
+            unplaced: components["schemas"]["ChartMember"][];
+        };
         /** Page[ClientListItem] */
         Page_ClientListItem_: {
             /** Items */
@@ -2921,6 +3197,15 @@ export interface components {
              * Format: date-time
              */
             registered_at: string;
+        };
+        /** PermissionInfo */
+        PermissionInfo: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Module */
+            module: string;
         };
         /** Permissions */
         Permissions: {
@@ -3081,6 +3366,31 @@ export interface components {
             start_date: string;
             stats: components["schemas"]["ProjectStats"];
         };
+        /** ProjectOption */
+        ProjectOption: {
+            /** Code */
+            code: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            manager: components["schemas"]["PersonRef"] | null;
+            /** Name */
+            name: string;
+        };
+        /** ProjectRef */
+        ProjectRef: {
+            /** Code */
+            code: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /** ProjectStats */
         ProjectStats: {
             /** In Review */
@@ -3174,6 +3484,160 @@ export interface components {
             full_name: string;
             /** Id Token */
             id_token: string;
+        };
+        /** Relation */
+        Relation: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "direct_manager" | "functional_manager" | "project_manager" | "department_head" | "leave_approver" | "performance_reviewer" | "executive_escalation";
+            /** Kind Label */
+            kind_label: string;
+            manager: components["schemas"]["PersonRef"];
+            project?: components["schemas"]["ProjectRef"] | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "explicit" | "department" | "direct_manager" | "functional_manager";
+            /** Starts On */
+            starts_on?: string | null;
+        };
+        /** Reporting */
+        Reporting: {
+            /** Can Edit */
+            can_edit: boolean;
+            department: components["schemas"]["Ref"] | null;
+            /** Effective */
+            effective: components["schemas"]["Relation"][];
+            employee: components["schemas"]["PersonRef"];
+            /** History */
+            history: components["schemas"]["ReportingLineOut"][];
+            /** Lines */
+            lines: components["schemas"]["ReportingLineOut"][];
+            /** Projects Only */
+            projects_only: boolean;
+        };
+        /**
+         * ReportingChange
+         * @description The complete set of explicit lines the employee should have. Lines not listed
+         *     are ended on `effective_on` (default today); new ones start that day.
+         */
+        ReportingChange: {
+            /** Effective On */
+            effective_on?: string | null;
+            /** Lines */
+            lines: components["schemas"]["ReportingLineIn"][];
+        };
+        /** ReportingLineIn */
+        ReportingLineIn: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "direct_manager" | "functional_manager" | "project_manager" | "department_head" | "leave_approver" | "performance_reviewer" | "executive_escalation";
+            /**
+             * Manager Id
+             * Format: uuid
+             */
+            manager_id: string;
+            /** Project Id */
+            project_id?: string | null;
+        };
+        /** ReportingLineOut */
+        ReportingLineOut: {
+            /** Active */
+            active: boolean;
+            /** Created By */
+            created_by: string | null;
+            /** Ended By */
+            ended_by: string | null;
+            /** Ends On */
+            ends_on: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "direct_manager" | "functional_manager" | "project_manager" | "department_head" | "leave_approver" | "performance_reviewer" | "executive_escalation";
+            /** Kind Label */
+            kind_label: string;
+            manager: components["schemas"]["PersonRef"];
+            project: components["schemas"]["ProjectRef"] | null;
+            /**
+             * Starts On
+             * Format: date
+             */
+            starts_on: string;
+        };
+        /** ReportingPreview */
+        ReportingPreview: {
+            /** Added */
+            added: components["schemas"]["LineChange"][];
+            chart: components["schemas"]["OrgChart"];
+            /** Effective */
+            effective: components["schemas"]["Relation"][];
+            /** Ended */
+            ended: components["schemas"]["LineChange"][];
+            /** Errors */
+            errors: string[];
+            /** Valid */
+            valid: boolean;
+        };
+        /** RoleIn */
+        RoleIn: {
+            /** Description */
+            description?: string | null;
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+            /** Permissions */
+            permissions?: string[];
+        };
+        /** RoleOut */
+        RoleOut: {
+            /** Assignable */
+            assignable: boolean;
+            /** Description */
+            description: string | null;
+            /** Editable */
+            editable: boolean;
+            /** Is System */
+            is_system: boolean;
+            /** Key */
+            key: string;
+            /** Member Count */
+            member_count: number;
+            /** Name */
+            name: string;
+            /** Permissions */
+            permissions: string[];
+        };
+        /** RoleUpdate */
+        RoleUpdate: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Permissions */
+            permissions?: string[] | null;
+        };
+        /** RolesOverview */
+        RolesOverview: {
+            /** Can Assign */
+            can_assign: boolean;
+            /** Can Manage */
+            can_manage: boolean;
+            /** Catalogue */
+            catalogue: components["schemas"]["PermissionInfo"][];
+            /** Roles */
+            roles: components["schemas"]["RoleOut"][];
         };
         /** SectionOut */
         SectionOut: {
@@ -3493,6 +3957,28 @@ export interface components {
              * Format: uuid
              */
             id: string;
+        };
+        /** UserRoles */
+        UserRoles: {
+            /** Editable */
+            editable: boolean;
+            /** Email */
+            email: string;
+            employee: components["schemas"]["PersonRef"] | null;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Roles */
+            roles: string[];
+        };
+        /** UserRolesUpdate */
+        UserRolesUpdate: {
+            /** Roles */
+            roles: string[];
         };
         /** ValidationError */
         ValidationError: {
@@ -8229,6 +8715,7 @@ export interface operations {
                 /** @description Name, code or e-mail */
                 q?: string | null;
                 department_id?: string | null;
+                designation_id?: string | null;
                 status?: ("onboarding" | "probation" | "active" | "notice" | "on_hold" | "exited") | null;
                 include_exited?: boolean;
             };
@@ -8548,145 +9035,6 @@ export interface operations {
             };
         };
     };
-    team_add_dotted_line: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                employee_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DottedLineIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EmployeeDetail"];
-                };
-            };
-            /** @description Authentication required */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Permission denied */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Duplicate e-mail, account link or name */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Validation failed or business rule violated */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
-    team_end_dotted_line: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                employee_id: string;
-                line_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EmployeeDetail"];
-                };
-            };
-            /** @description Authentication required */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Permission denied */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Duplicate e-mail, account link or name */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-            /** @description Validation failed or business rule violated */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorEnvelope"];
-                };
-            };
-        };
-    };
     team_employment_history: {
         parameters: {
             query?: never;
@@ -8776,6 +9124,413 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EmployeeDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate e-mail, account link or name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    team_get_reporting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reporting"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate e-mail, account link or name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    team_change_reporting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportingChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reporting"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate e-mail, account link or name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    team_preview_reporting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportingChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingPreview"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate e-mail, account link or name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    team_org_audit: {
+        parameters: {
+            query?: {
+                action?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgAuditEntry"][];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate e-mail, account link or name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    team_org_chart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgChart"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate e-mail, account link or name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    team_project_options: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOption"][];
                 };
             };
             /** @description Authentication required */
@@ -8975,6 +9730,347 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    team_list_roles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RolesOverview"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate e-mail, account link or name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    team_create_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleOut"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate e-mail, account link or name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    team_update_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleOut"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate e-mail, account link or name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    team_list_user_roles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRoles"][];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate e-mail, account link or name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    team_set_user_roles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserRolesUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserRoles"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Duplicate e-mail, account link or name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };

@@ -66,10 +66,11 @@ class World:
 @pytest.fixture
 async def world(db_session: AsyncSession, migrated_database_url: str) -> AsyncIterator[World]:
     roles = {}
+    # Migrations may already have created some roles (e.g. org_admin in 0010).
+    existing = {r.key: r for r in (await db_session.execute(select(Role))).scalars()}
     for definition in DEFAULT_ROLES:
-        role = Role(
-            key=definition.key, name=definition.name, permissions=sorted(definition.permissions)
-        )
+        role = existing.get(definition.key) or Role(key=definition.key, name=definition.name)
+        role.permissions = sorted(definition.permissions)
         db_session.add(role)
         roles[definition.key] = role
     await db_session.flush()

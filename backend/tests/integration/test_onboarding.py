@@ -64,6 +64,11 @@ class World:
         await self.session.flush()
         return user
 
+    async def grant(self, user: User, role: str) -> None:
+        """Give the user one more role."""
+        self.session.add(UserRole(user_id=user.id, role_id=self.roles[role].id))
+        await self.session.flush()
+
     async def act_as(self, user: User) -> None:
         self.current[:] = [await actor_for_user(self.session, user)]
 
@@ -106,11 +111,12 @@ def error(response: httpx.Response) -> str:
 async def world(
     db_session: AsyncSession, migrated_database_url: str, tmp_path: Path
 ) -> AsyncIterator[World]:
+    # Migrations may already have created some roles (e.g. org_admin in 0010).
+    existing = {r.key: r for r in (await db_session.execute(select(Role))).scalars()}
     roles = {}
     for definition in DEFAULT_ROLES:
-        role = Role(
-            key=definition.key, name=definition.name, permissions=sorted(definition.permissions)
-        )
+        role = existing.get(definition.key) or Role(key=definition.key, name=definition.name)
+        role.permissions = sorted(definition.permissions)
         db_session.add(role)
         roles[definition.key] = role
     await db_session.flush()

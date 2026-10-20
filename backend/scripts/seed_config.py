@@ -1,4 +1,4 @@
-"""Idempotently upsert the default roles from app.authz.permissions.
+"""Idempotently add the default roles from app.authz.permissions that are missing.
 
 Configuration only: no users, clients or metrics are ever seeded.
 Run: make seed-config
@@ -34,15 +34,9 @@ async def main() -> int:
                 permissions=sorted(role.permissions),
                 is_system=True,
             )
-            stmt = stmt.on_conflict_do_update(
-                index_elements=[Role.key],
-                set_={
-                    "name": stmt.excluded.name,
-                    "description": stmt.excluded.description,
-                    "permissions": stmt.excluded.permissions,
-                    "is_system": True,
-                },
-            )
+            # Never overwrite an existing role: admins edit permissions in the app
+            # (Organization & Role Settings); permission changes ship as migrations.
+            stmt = stmt.on_conflict_do_nothing(index_elements=[Role.key])
             await conn.execute(stmt)
     await engine.dispose()
     print(f"seeded {len(DEFAULT_ROLES)} roles")

@@ -4,17 +4,20 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.projects.models import Project
 from app.modules.team.models import (
     Department,
+    DepartmentOwner,
     Designation,
     Employee,
     EmployeePersonal,
     EmploymentEvent,
     ReportingLine,
 )
+from app.platform.audit.models import AuditLog
 from app.platform.identity.models import Role, User, UserRole
 
 
@@ -101,8 +104,15 @@ class PeopleRepository:
     async def designation(self, designation_id: uuid.UUID) -> Designation | None:
         return await self._session.get(Designation, designation_id)
 
-    async def designation_by_name(self, name: str) -> Designation | None:
-        stmt = select(Designation).where(Designation.name == name)
+    async def designation_by_name(
+        self, name: str, department_id: uuid.UUID | None
+    ) -> Designation | None:
+        stmt = select(Designation).where(
+            Designation.name == name,
+            Designation.department_id.is_(None)
+            if department_id is None
+            else Designation.department_id == department_id,
+        )
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
     # ------------------------------------------------------------ reporting lines
@@ -115,8 +125,41 @@ class PeopleRepository:
         )
         return list(rows.scalars())
 
-    async def line(self, line_id: uuid.UUID) -> ReportingLine | None:
-        return await self._session.get(ReportingLine, line_id)
+    async def lines_for(self, employee_id: uuid.UUID) -> list[ReportingLine]:
+        """Every line of the employee, ended ones included, newest first."""
+        rows = await self._session.execute(
+            select(ReportingLine)
+            .where(ReportingLine.employee_id == employee_id)
+            .order_by(ReportingLine.starts_on.desc(), ReportingLine.created_at.desc())
+        )
+        return list(rows.scalars())
+
+    async def owners(self) -> list[DepartmentOwner]:
+        rows = await self._session.execute(
+            select(DepartmentOwner).order_by(DepartmentOwner.created_at)
+        )
+        return list(rows.scalars())
+
+    async def replace_owners(
+        self, department_id: uuid.UUID, owner_ids: list[uuid.UUID], by: uuid.UUID
+    ) -> None:
+        await self._session.execute(
+            delete(DepartmentOwner).where(DepartmentOwner.department_id == department_id)
+        )
+        for owner_id in owner_ids:
+            self._session.add(
+                DepartmentOwner(department_id=department_id, employee_id=owner_id, created_by_id=by)
+            )
+        await self._session.flush()
+
+    # ------------------------------------------------------------ projects (read only)
+
+    async def projects(self) -> list[Project]:
+        rows = await self._session.execute(select(Project).order_by(Project.code))
+        return list(rows.scalars())
+
+    async def project(self, project_id: uuid.UUID) -> Project | None:
+        return await self._session.get(Project, project_id)
 
     # ------------------------------------------------------------ personal, history, users
 
@@ -144,6 +187,12 @@ class PeopleRepository:
         )
         return list(rows.scalars())
 
+    async def users(self, ids: set[uuid.UUID]) -> dict[uuid.UUID, User]:
+        if not ids:
+            return {}
+        rows = await self._session.execute(select(User).where(User.id.in_(ids)))
+        return {u.id: u for u in rows.scalars()}
+
     def add(
         self,
         obj: Employee
@@ -157,3 +206,82 @@ class PeopleRepository:
 
     async def flush(self) -> None:
         await self._session.flush()
+
+
+class RoleRepository:
+    """Role definitions and user-role assignments (Organization & Role Settings)."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def roles(self) -> list[Role]:
+        rows = await self._session.execute(select(Role).order_by(Role.name))
+        return list(rows.scalars())
+
+    async def role(self, key: str, *, lock: bool = False) -> Role | None:
+        stmt = select(Role).where(Role.key == key)
+        if lock:
+            stmt = stmt.with_for_update()
+        return (await self._session.execute(stmt)).scalar_one_or_none()
+
+    async def member_counts(self) -> dict[uuid.UUID, int]:
+        rows = await self._session.execute(
+            select(UserRole.role_id, func.count()).group_by(UserRole.role_id)
+        )
+        return {role_id: count for role_id, count in rows.all()}  # noqa: C416
+
+    async def users(self) -> list[User]:
+        """Approved, active sign-in accounts."""
+        rows = await self._session.execute(
+            select(User)
+            .where(User.is_active.is_(True), User.approved_at.is_not(None))
+            .order_by(User.full_name)
+        )
+        return list(rows.scalars())
+
+    async def user(self, user_id: uuid.UUID) -> User | None:
+        return await self._session.get(User, user_id)
+
+    async def assignments(self) -> list[tuple[uuid.UUID, str]]:
+        rows = await self._session.execute(
+            select(UserRole.user_id, Role.key).join(Role, Role.id == UserRole.role_id)
+        )
+        return [(user_id, key) for user_id, key in rows.all()]
+
+    async def set_roles(self, user_id: uuid.UUID, roles: list[Role], by: uuid.UUID) -> None:
+        await self._session.execute(delete(UserRole).where(UserRole.user_id == user_id))
+        for role in roles:
+            self._session.add(UserRole(user_id=user_id, role_id=role.id, assigned_by_id=by))
+        await self._session.flush()
+
+    def add(self, role: Role) -> None:
+        self._session.add(role)
+
+    async def flush(self) -> None:
+        await self._session.flush()
+
+
+#: Audit actions that belong to the organisation audit log.
+ORG_AUDIT_PREFIXES = ("department.", "designation.", "reporting.", "role.", "user.roles")
+ORG_AUDIT_ACTIONS = ("employee.created", "employee.placement_changed")
+
+
+class OrgAuditRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def entries(
+        self, *, limit: int, action: str | None = None
+    ) -> list[tuple[AuditLog, User | None]]:
+        conditions = [AuditLog.action.like(f"{p}%") for p in ORG_AUDIT_PREFIXES]
+        conditions.append(AuditLog.action.in_(ORG_AUDIT_ACTIONS))
+        stmt = (
+            select(AuditLog, User)
+            .outerjoin(User, User.id == AuditLog.actor_user_id)
+            .where(or_(*conditions))
+            .order_by(AuditLog.occurred_at.desc(), AuditLog.id)
+            .limit(limit)
+        )
+        if action:
+            stmt = stmt.where(AuditLog.action.like(f"{action}%"))
+        return [(entry, user) for entry, user in (await self._session.execute(stmt)).all()]

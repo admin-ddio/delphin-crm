@@ -7,5 +7,5 @@ export const routes = groupByLayout(teamRouteSpecs, {
   '/team/employees': () => import('@/features/team/EmployeesPage'),
   '/team/employees/new': () => import('@/features/team/NewEmployeePage'),
   '/team/employees/:id': () => import('@/features/team/EmployeePage'),
-  '/team/teams': () => import('@/features/team/DepartmentsPage'),
+  '/team/teams': () => import('@/features/team/OrgSettingsPage'),
 });

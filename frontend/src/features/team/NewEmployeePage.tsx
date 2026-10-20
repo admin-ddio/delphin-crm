@@ -18,6 +18,7 @@ export function Component() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const create = useCreateEmployee();
+  const placement = can(actor?.permissions ?? [], P.orgReportingManage);
 
   if (!can(actor?.permissions ?? [], P.hrManage)) {
     return (
@@ -35,18 +36,25 @@ export function Component() {
       <PageHeader
         title="New employee"
         crumb={crumb}
-        description="The employee ID (DD-0001…) is assigned automatically. Personal details are added from the profile, by the employee or HR."
+        description={
+          placement
+            ? 'The employee ID (DD-0001…) is assigned automatically. Personal details are added from the profile, by the employee or HR.'
+            : 'The employee ID (DD-0001…) is assigned automatically. Department, designation and reporting lines are set by an Organization Admin in Organization & Role Settings.'
+        }
       />
       <Panel>
         <EmploymentForm
           initial={emptyEmployment}
+          placement={placement}
           submitLabel="Create employee"
           cancelTo="/team/employees"
           onSubmit={async (values) => {
             try {
-              const body = toBody(values);
+              const body = toBody(values, { placement });
               const employee = await create.mutateAsync({
                 ...body,
+                full_name: body.full_name ?? '',
+                employment_type: values.employment_type,
                 status: body.status as EmployeeCreate['status'],
               });
               toast({ title: `${employee.full_name} added (${employee.code}).` });

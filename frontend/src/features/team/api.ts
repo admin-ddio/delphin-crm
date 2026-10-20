@@ -15,10 +15,27 @@ export type EmploymentType = EmployeeCreate['employment_type'];
 export type WorkArrangement = NonNullable<EmployeeCreate['work_arrangement']>;
 export type Department = components['schemas']['DepartmentOut'];
 export type Designation = components['schemas']['DesignationOut'];
+export type Relation = components['schemas']['Relation'];
+export type ReportingKind = Relation['kind'];
+export type Reporting = components['schemas']['Reporting'];
+export type ReportingLineOut = components['schemas']['ReportingLineOut'];
+export type ReportingChange = components['schemas']['ReportingChange'];
+export type ReportingLineIn = components['schemas']['ReportingLineIn'];
+export type ReportingPreview = components['schemas']['ReportingPreview'];
+export type OrgChart = components['schemas']['OrgChart'];
+export type ChartMember = components['schemas']['ChartMember'];
+export type ChartDepartment = components['schemas']['ChartDepartment'];
+export type DeliveryGroup = components['schemas']['DeliveryGroup'];
+export type ProjectOption = components['schemas']['ProjectOption'];
+export type RolesOverview = components['schemas']['RolesOverview'];
+export type RoleOut = components['schemas']['RoleOut'];
+export type UserRoles = components['schemas']['UserRoles'];
+export type OrgAuditEntry = components['schemas']['OrgAuditEntry'];
 
 export interface DirectoryParams {
   q?: string;
   department_id?: string;
+  designation_id?: string;
   status?: EmployeeStatus;
   include_exited?: boolean;
 }
@@ -31,6 +48,41 @@ export const teamKeys = {
   userOptions: ['team', 'user-options'] as const,
   departments: ['team', 'departments'] as const,
   designations: ['team', 'designations'] as const,
+  reporting: (id: string) => ['team', 'reporting', id] as const,
+  orgChart: ['team', 'org-chart'] as const,
+  projectOptions: ['team', 'project-options'] as const,
+  roles: ['team', 'roles'] as const,
+  users: ['team', 'users'] as const,
+  audit: ['team', 'org-audit'] as const,
+};
+
+/** The seven relationship types, in display order (Organization brief §6). */
+export const REPORTING_KINDS: { value: ReportingKind; label: string; multi: boolean }[] = [
+  { value: 'direct_manager', label: 'Direct manager', multi: false },
+  { value: 'functional_manager', label: 'Functional manager', multi: true },
+  { value: 'project_manager', label: 'Project manager', multi: true },
+  { value: 'department_head', label: 'Department head', multi: false },
+  { value: 'leave_approver', label: 'Leave approver', multi: false },
+  { value: 'performance_reviewer', label: 'Performance reviewer', multi: false },
+  { value: 'executive_escalation', label: 'Executive escalation', multi: false },
+];
+
+/** Line styles and text labels per relationship: the chart never relies on colour alone. */
+export const LINE_STYLE: Record<ReportingKind, { border: string; short: string }> = {
+  direct_manager: { border: 'border-solid', short: 'Direct' },
+  functional_manager: { border: 'border-dashed', short: 'Functional' },
+  project_manager: { border: 'border-dotted', short: 'Project' },
+  department_head: { border: 'border-double', short: 'Head' },
+  leave_approver: { border: 'border-solid', short: 'Leave' },
+  performance_reviewer: { border: 'border-solid', short: 'Review' },
+  executive_escalation: { border: 'border-solid', short: 'Escalation' },
+};
+
+export const SOURCE_LABELS: Record<Relation['source'], string> = {
+  explicit: 'set on the employee',
+  department: 'department default',
+  direct_manager: 'via the direct manager',
+  functional_manager: 'via the functional manager',
 };
 
 export const EMPLOYEE_STATUS: Record<EmployeeStatus, { label: string; tone: BadgeTone }> = {
@@ -161,30 +213,6 @@ export function useUpdatePersonal(id: string) {
   });
 }
 
-export function useDottedLines(id: string) {
-  const refresh = useRefreshPeople();
-  const add = useMutation({
-    mutationFn: async (managerId: string) =>
-      unwrap(
-        await api.POST('/api/v1/team/employees/{employee_id}/dotted-lines', {
-          params: { path: { employee_id: id } },
-          body: { manager_id: managerId },
-        }),
-      ),
-    onSuccess: (employee) => refresh(employee),
-  });
-  const end = useMutation({
-    mutationFn: async (lineId: string) =>
-      unwrap(
-        await api.DELETE('/api/v1/team/employees/{employee_id}/dotted-lines/{line_id}', {
-          params: { path: { employee_id: id, line_id: lineId } },
-        }),
-      ),
-    onSuccess: (employee) => refresh(employee),
-  });
-  return { add, end };
-}
-
 export function useSaveDepartment() {
   const refresh = useRefreshPeople();
   return useMutation({
@@ -196,6 +224,8 @@ export function useSaveDepartment() {
       name?: string;
       description?: string | null;
       head_id?: string | null;
+      owner_ids?: string[];
+      delivery_manager_id?: string | null;
       is_active?: boolean;
     }) =>
       id
@@ -207,7 +237,7 @@ export function useSaveDepartment() {
           )
         : unwrap(
             await api.POST('/api/v1/team/departments', {
-              body: { name: body.name ?? '', description: body.description, head_id: body.head_id },
+              body: { ...body, name: body.name ?? '' },
             }),
           ),
     onSuccess: () => refresh(),
@@ -217,7 +247,15 @@ export function useSaveDepartment() {
 export function useSaveDesignation() {
   const refresh = useRefreshPeople();
   return useMutation({
-    mutationFn: async ({ id, ...body }: { id?: string; name?: string; is_active?: boolean }) =>
+    mutationFn: async ({
+      id,
+      ...body
+    }: {
+      id?: string;
+      name?: string;
+      department_id?: string | null;
+      is_active?: boolean;
+    }) =>
       id
         ? unwrap(
             await api.PATCH('/api/v1/team/designations/{designation_id}', {
@@ -225,7 +263,151 @@ export function useSaveDesignation() {
               body,
             }),
           )
-        : unwrap(await api.POST('/api/v1/team/designations', { body: { name: body.name ?? '' } })),
+        : unwrap(
+            await api.POST('/api/v1/team/designations', {
+              body: { name: body.name ?? '', department_id: body.department_id ?? null },
+            }),
+          ),
     onSuccess: () => refresh(),
+  });
+}
+
+// ---------------------------------------------------------------- Organization & Role Settings
+
+export function useOrgChart(enabled = true) {
+  return useQuery({
+    queryKey: teamKeys.orgChart,
+    queryFn: async () => unwrap(await api.GET('/api/v1/team/org-chart')),
+    enabled,
+  });
+}
+
+export function useReporting(id: string | null) {
+  return useQuery({
+    queryKey: teamKeys.reporting(id ?? ''),
+    queryFn: async () =>
+      unwrap(
+        await api.GET('/api/v1/team/employees/{employee_id}/reporting', {
+          params: { path: { employee_id: id ?? '' } },
+        }),
+      ),
+    enabled: Boolean(id),
+  });
+}
+
+export function usePreviewReporting(id: string) {
+  return useMutation({
+    mutationFn: async (body: ReportingChange) =>
+      unwrap(
+        await api.POST('/api/v1/team/employees/{employee_id}/reporting/preview', {
+          params: { path: { employee_id: id } },
+          body,
+        }),
+      ),
+  });
+}
+
+export function useSaveReporting(id: string) {
+  const refresh = useRefreshPeople();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: ReportingChange) =>
+      unwrap(
+        await api.PUT('/api/v1/team/employees/{employee_id}/reporting', {
+          params: { path: { employee_id: id } },
+          body,
+        }),
+      ),
+    onSuccess: (reporting) => {
+      queryClient.setQueryData(teamKeys.reporting(id), reporting);
+      void refresh();
+    },
+  });
+}
+
+export function useProjectOptions(enabled: boolean) {
+  return useQuery({
+    queryKey: teamKeys.projectOptions,
+    queryFn: async () => unwrap(await api.GET('/api/v1/team/project-options')),
+    enabled,
+  });
+}
+
+export function useRoles(enabled: boolean) {
+  return useQuery({
+    queryKey: teamKeys.roles,
+    queryFn: async () => unwrap(await api.GET('/api/v1/team/roles')),
+    enabled,
+  });
+}
+
+export function useUserRoles(enabled: boolean) {
+  return useQuery({
+    queryKey: teamKeys.users,
+    queryFn: async () => unwrap(await api.GET('/api/v1/team/users')),
+    enabled,
+  });
+}
+
+function useRefreshRoles() {
+  const queryClient = useQueryClient();
+  return () =>
+    void queryClient.invalidateQueries({
+      predicate: (q) =>
+        q.queryKey[0] === 'team' && ['roles', 'users', 'org-audit'].includes(String(q.queryKey[1])),
+    });
+}
+
+export function useSaveRole() {
+  const refresh = useRefreshRoles();
+  return useMutation({
+    mutationFn: async ({
+      create,
+      key,
+      name,
+      description,
+      permissions,
+    }: {
+      create: boolean;
+      key: string;
+      name: string;
+      description?: string | null;
+      permissions: string[];
+    }) =>
+      create
+        ? unwrap(
+            await api.POST('/api/v1/team/roles', {
+              body: { key, name, description, permissions },
+            }),
+          )
+        : unwrap(
+            await api.PATCH('/api/v1/team/roles/{key}', {
+              params: { path: { key } },
+              body: { name, description, permissions },
+            }),
+          ),
+    onSuccess: refresh,
+  });
+}
+
+export function useSetUserRoles() {
+  const refresh = useRefreshRoles();
+  return useMutation({
+    mutationFn: async ({ userId, roles }: { userId: string; roles: string[] }) =>
+      unwrap(
+        await api.PUT('/api/v1/team/users/{user_id}/roles', {
+          params: { path: { user_id: userId } },
+          body: { roles },
+        }),
+      ),
+    onSuccess: refresh,
+  });
+}
+
+export function useOrgAudit(enabled: boolean) {
+  return useQuery({
+    queryKey: teamKeys.audit,
+    queryFn: async () => unwrap(await api.GET('/api/v1/team/org-audit')),
+    enabled,
   });
 }
