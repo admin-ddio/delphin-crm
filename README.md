@@ -74,5 +74,5 @@ Makefile            the only entry point
 
 [Architecture](docs/architecture.md) · [Development](docs/development.md) ·
 [Conventions](docs/conventions.md) · [API guidelines](docs/api-guidelines.md) ·
-[Security](docs/security.md) · [Testing](docs/testing.md) · [Deployment](docs/deployment.md) ·
+[Security](docs/security.md) · [Testing](docs/testing.md) · [Deployment](docs/deployment.md) · [Production setup](docs/production-setup.md) ·
 [Pilot parity](docs/pilot-parity.md) · [ADRs](docs/adr/)

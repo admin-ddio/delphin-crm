@@ -1,5 +1,8 @@
 # Deployment
 
+Setting up a server for the first time? Follow [production-setup.md](production-setup.md), a
+step-by-step checklist with troubleshooting.
+
 The production profile is `compose.yaml` + `compose.prod.yaml`:
 
 - `edge`: nginx (non-root, read-only) serves the built SPA and proxies `/api` to `backend`. It is the
