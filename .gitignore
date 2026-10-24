@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.example
+# Firebase service-account keys (secrets/firebase-service-account.json)
+/secrets/
+*firebase-adminsdk*.json
 
 # Python
 __pycache__/

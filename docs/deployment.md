@@ -33,9 +33,22 @@ Call `POST /api/v1/jobs/run` with `Authorization: Bearer $CRON_SECRET` from an e
 
 ## First administrator
 
-Seed roles with `make seed-config`, then
-`docker compose run --rm backend python scripts/create_super_admin.py <email> "<name>"` prints a one-time
-password-setup link (see "Firebase Auth" below).
+Either way needs real Firebase configured (see "Firebase Auth" below).
+
+**Sign in straight away** with an e-mail and a password you choose. The script seeds the roles,
+creates or updates the Firebase account with a verified e-mail, and grants `super_admin`. It prompts
+for the password (12+ characters in production) or reads `SUPER_ADMIN_PASSWORD`. Re-run it to reset
+the password or to repair an account first created in the emulator.
+
+```bash
+docker compose -f compose.yaml -f compose.prod.yaml run --rm \
+  -v /path/to/service-account.json:/run/secrets/firebase.json:ro \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/firebase.json \
+  backend python scripts/seed_super_admin.py <email> "<name>"
+```
+
+**Or invite** with a one-time password-setup link: seed roles with `make seed-config`, then
+`docker compose run --rm backend python scripts/create_super_admin.py <email> "<name>"`.
 
 ## Migrations and rollback
 
