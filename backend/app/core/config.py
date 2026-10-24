@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     # Firebase Auth is the identity provider (ADR-0009). The SDK also reads
     # FIREBASE_AUTH_EMULATOR_HOST and GOOGLE_APPLICATION_CREDENTIALS from the environment.
     firebase_project_id: str = Field(min_length=1)
+    # Read here only to refuse it in production: with it set, the Admin SDK accepts
+    # unsigned ID tokens and manages emulator users instead of the real project.
+    firebase_auth_emulator_host: str = ""
 
     allowed_hosts: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["localhost", "127.0.0.1"]
@@ -88,6 +91,9 @@ class Settings(BaseSettings):
             raise ValueError(msg)
         if "*" in self.allowed_hosts:
             msg = "ALLOWED_HOSTS must list explicit hosts in production"
+            raise ValueError(msg)
+        if self.firebase_auth_emulator_host.strip():
+            msg = "FIREBASE_AUTH_EMULATOR_HOST must be empty in production (it bypasses Firebase)"
             raise ValueError(msg)
         return self
 

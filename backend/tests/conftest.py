@@ -41,6 +41,7 @@ def make_settings(**overrides: object) -> Settings:
         "secret_key": SecretStr("test-secret-key-0123456789abcdef0123456789"),
         "cron_secret": SecretStr("test-cron-secret-0123456789abcdef012345678"),
         "firebase_project_id": os.environ.get("FIREBASE_PROJECT_ID", "demo-delphin"),
+        "firebase_auth_emulator_host": "",
         "allowed_hosts": ["testserver", "localhost"],
         "log_level": "WARNING",
     }

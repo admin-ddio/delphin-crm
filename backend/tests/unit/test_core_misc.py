@@ -51,6 +51,11 @@ class TestSettings:
             make_settings(app_env="production", cors_origins=["http://x.test"])
         with pytest.raises(ValidationError, match="ALLOWED_HOSTS"):
             make_settings(app_env="production", allowed_hosts=["*"])
+        with pytest.raises(ValidationError, match="FIREBASE_AUTH_EMULATOR_HOST"):
+            make_settings(app_env="production", firebase_auth_emulator_host="firebase:9099")
+        assert make_settings(
+            firebase_auth_emulator_host="firebase:9099"
+        ).firebase_auth_emulator_host
 
     def test_log_level_case_insensitive(self) -> None:
         assert make_settings(log_level="debug").log_level == "DEBUG"
