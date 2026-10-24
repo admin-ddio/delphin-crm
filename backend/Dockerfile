@@ -11,7 +11,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH"
 COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /uvx /bin/
 RUN groupadd --system --gid 10001 app \
- && useradd --system --uid 10001 --gid app --home-dir /app --no-create-home app
+ && useradd --system --uid 10001 --gid app --home-dir /app --no-create-home app \
+ && mkdir -p /data/uploads \
+ && chown app:app /data/uploads
 WORKDIR /app
 
 FROM base AS deps

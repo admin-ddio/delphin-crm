@@ -11,18 +11,19 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md';
 
 const base =
-  'inline-flex cursor-pointer items-center gap-1.5 rounded-md border font-medium whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-45';
+  'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-45';
 
 const variants: Record<ButtonVariant, string> = {
-  primary: 'border-accent bg-accent text-on-accent hover:bg-accent-strong',
+  primary:
+    'border-accent bg-accent text-on-accent shadow-sm hover:border-accent-strong hover:bg-accent-strong',
   secondary: 'border-line bg-surface text-fg hover:bg-sunk',
   ghost: 'border-transparent bg-transparent text-accent hover:bg-accent-soft',
-  danger: 'border-bad bg-transparent text-bad',
+  danger: 'border-bad/40 bg-surface text-bad hover:bg-bad-soft',
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: 'px-2 py-[3px] text-xs',
-  md: 'px-[11px] py-1.5 text-[13px]',
+  sm: 'px-2.5 py-1 text-[12.5px]',
+  md: 'px-4 py-2 text-sm',
 };
 
 export function buttonClasses(variant: ButtonVariant = 'secondary', size: ButtonSize = 'md') {

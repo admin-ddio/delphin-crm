@@ -41,7 +41,8 @@ def domain_of(website: str | None) -> str | None:
 
 
 STATUS_LABELS = {
-    "contract_pending": "Contract pending",
     "onboarding": "Onboarding",
     "active": "Active",
+    "on_hold": "On hold",
+    "completed": "Completed",
 }

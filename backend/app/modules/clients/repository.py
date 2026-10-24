@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import ColumnElement, Select, func, or_, select, true
@@ -14,7 +15,8 @@ from app.authz.actor import Actor
 from app.authz.permissions import CLIENTS_VIEW_ALL, SUPER_ADMIN
 from app.authz.scopes import apply_scope
 from app.core.pagination import PageParams
-from app.modules.clients.models import Client
+from app.modules.clients.models import Client, ClientTeamMember
+from app.modules.onboarding.models import ClientOnboarding
 from app.platform.activity.models import ActivityEvent
 from app.platform.identity.models import Role, User, UserRole
 
@@ -32,15 +34,18 @@ class ClientScope:
     """Who sees which clients.
 
     Demo rule: Super Admin, Account Managers, Project Managers and Finance see every
-    client (`clients.view_all`); everyone else only clients they work on.
-    TODO(pilot-port): "work on" = client team / assigned tasks, once those exist;
-    until then a client's own Account Manager is the only other way in.
+    client (`clients.view_all`); everyone else only clients they work on: as the
+    client's Account Manager or on its internal team (onboarding step 10).
+    TODO(pilot-port): also clients where the actor has assigned tasks, once tasks exist.
     """
 
     def clause(self, actor: Actor) -> ColumnElement[bool]:
         if actor.can(CLIENTS_VIEW_ALL):
             return true()
-        return Client.account_manager_id == actor.user_id
+        on_team = select(ClientTeamMember.client_id).where(
+            ClientTeamMember.user_id == actor.user_id
+        )
+        return or_(Client.account_manager_id == actor.user_id, Client.id.in_(on_team))
 
 
 class ClientRepository:
@@ -165,3 +170,29 @@ class ClientRepository:
             .limit(limit)
         )
         return [(event, user) for event, user in rows.all()]
+
+    async def last_activity(self, client_ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, datetime]:
+        """Latest timeline event per client (list "Last activity" column)."""
+        if not client_ids:
+            return {}
+        rows = await self._session.execute(
+            select(ActivityEvent.subject_id, func.max(ActivityEvent.occurred_at))
+            .where(
+                ActivityEvent.subject_type == "client",
+                ActivityEvent.subject_id.in_([str(i) for i in client_ids]),
+            )
+            .group_by(ActivityEvent.subject_id)
+        )
+        return {uuid.UUID(subject): at for subject, at in rows.all()}
+
+    async def status_counts(self, actor: Actor) -> dict[str, int]:
+        """Visible clients per status (list tabs)."""
+        stmt = apply_scope(
+            select(Client.status, func.count()).group_by(Client.status), actor, self._scope
+        )
+        rows = await self._session.execute(stmt)
+        return {status: int(count) for status, count in rows.all()}
+
+    async def onboarded(self, client_id: uuid.UUID) -> bool:
+        stmt = select(ClientOnboarding.completed_at).where(ClientOnboarding.client_id == client_id)
+        return (await self._session.execute(stmt)).scalar_one_or_none() is not None

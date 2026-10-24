@@ -1,6 +1,6 @@
-"""Team & roles: approving self sign-ups (the rest of the module is not ported yet).
+"""Approving self sign-ups.
 
-Rules:
+Sign-up approval rules:
 - only actors with `users.approve` see or decide pending sign-ups (router guard);
 - approving assigns exactly one existing role and records who approved and when;
 - rejecting deletes the pending app user AND its Firebase account, so the e-mail

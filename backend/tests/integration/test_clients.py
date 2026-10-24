@@ -23,6 +23,17 @@ from tests.conftest import make_settings
 
 pytestmark = pytest.mark.integration
 
+#: The create form's other required fields (contact, contract).
+REQUIRED: dict[str, object] = {
+    "industry": "Retail",
+    "contact_name": "Pat Buyer",
+    "contact_designation": "Marketing Head",
+    "contact_email": "pat@acme.com",
+    "contact_phone": "+91 98765 43210",
+    "contract_start": "2026-05-01",
+    "contract_end": "2027-04-30",
+}
+
 
 @dataclass
 class World:
@@ -48,17 +59,18 @@ class World:
         self.current[:] = [await actor_for_user(self.session, user)]
 
     async def create(self, manager: User, **fields: object) -> httpx.Response:
-        body = {"name": "Acme Ltd", "account_manager_id": str(manager.id), **fields}
+        body = {**REQUIRED, "name": "Acme Ltd", "account_manager_id": str(manager.id), **fields}
         return await self.http.post("/api/v1/clients", json=body)
 
 
 @pytest.fixture
 async def world(db_session: AsyncSession, migrated_database_url: str) -> AsyncIterator[World]:
     roles = {}
+    # Migrations may already have created some roles (e.g. org_admin in 0010).
+    existing = {r.key: r for r in (await db_session.execute(select(Role))).scalars()}
     for definition in DEFAULT_ROLES:
-        role = Role(
-            key=definition.key, name=definition.name, permissions=sorted(definition.permissions)
-        )
+        role = existing.get(definition.key) or Role(key=definition.key, name=definition.name)
+        role.permissions = sorted(definition.permissions)
         db_session.add(role)
         roles[definition.key] = role
     await db_session.flush()
@@ -91,8 +103,8 @@ async def test_create_assigns_codes_normalises_and_audits(world: World) -> None:
     body = first.json()
     assert body["code"] == "CL-0001"
     assert body["domain"] == "acme.com"
-    assert body["status"] == "contract_pending"
-    assert body["status_label"] == "Contract pending"
+    assert body["status"] == "onboarding"  # the contract is signed before creation
+    assert body["status_label"] == "Onboarding"
     assert body["account_manager"]["full_name"] == "Anika Shah"
     assert body["can_edit"] is True
 
@@ -192,12 +204,14 @@ async def test_only_the_clients_own_account_manager_edits(world: World) -> None:
     await world.act_as(other)
     detail = (await world.http.get(f"/api/v1/clients/{client_id}")).json()
     assert detail["can_edit"] is False
-    denied = await world.http.patch(f"/api/v1/clients/{client_id}", json={"industry": "Retail"})
+    denied = await world.http.patch(
+        f"/api/v1/clients/{client_id}", json={"industry": "Hospitality"}
+    )
     assert denied.status_code == 403
 
     await world.act_as(await world.user("pm@example.com", "project_manager"))
     assert (
-        await world.http.patch(f"/api/v1/clients/{client_id}", json={"industry": "Retail"})
+        await world.http.patch(f"/api/v1/clients/{client_id}", json={"industry": "Hospitality"})
     ).status_code == 403
 
     await world.act_as(owner)
@@ -208,11 +222,15 @@ async def test_only_the_clients_own_account_manager_edits(world: World) -> None:
 
     updated = await world.http.patch(
         f"/api/v1/clients/{client_id}",
-        json={"industry": "Retail", "website": "acme.co.uk", "account_manager_id": str(other.id)},
+        json={
+            "industry": "Hospitality",
+            "website": "acme.co.uk",
+            "account_manager_id": str(other.id),
+        },
     )
     assert updated.status_code == 200, updated.text
     body = updated.json()
-    assert body["industry"] == "Retail"
+    assert body["industry"] == "Hospitality"
     assert body["domain"] == "acme.co.uk"
     assert body["account_manager"]["full_name"] == "Other Am"
     assert body["can_edit"] is False  # handed over to the other AM
@@ -220,7 +238,7 @@ async def test_only_the_clients_own_account_manager_edits(world: World) -> None:
     audit = (
         await world.session.execute(select(AuditLog).where(AuditLog.action == "client.updated"))
     ).scalar_one()
-    assert audit.changes["industry"] == [None, "Retail"]
+    assert audit.changes["industry"] == ["Retail", "Hospitality"]
     assert audit.changes["website"] == ["acme.com", "acme.co.uk"]
 
 
@@ -246,3 +264,77 @@ async def test_create_rules(world: World) -> None:
     options = (await world.http.get("/api/v1/clients/account-managers")).json()
     assert {o["full_name"] for o in options} == {"Am", "Big Boss"}
     assert str(boss.id) in {o["id"] for o in options}
+
+
+async def test_create_form_contract_and_lifecycle(world: World) -> None:
+    am = await world.user("am@example.com", "account_manager")
+    await world.act_as(am)
+    created = await world.create(
+        am,
+        website="abctechnologies.com",
+        business_type="b2b",
+        company_size="51-200",
+        country="in",
+        description="Software development and digital solutions",
+        contact_alt_email="",
+        contract_value="500000",
+        payment_terms="monthly",
+        contract_notes="SEO and content marketing",
+    )
+    assert created.status_code == 201, created.text
+    client = created.json()
+    assert (client["country"], client["business_type"], client["company_size"]) == (
+        "IN",
+        "b2b",
+        "51-200",
+    )
+    assert (client["contract_value"], client["contract_currency"]) == ("500000.00", "INR")
+    assert (client["contract_start"], client["contract_end"]) == ("2026-05-01", "2027-04-30")
+    assert client["contact_alt_email"] is None
+    assert client["last_activity_at"] is not None
+
+    backwards = await world.create(
+        am, name="Backwards", website="b.io", contract_start="2026-05-01", contract_end="2026-04-01"
+    )
+    assert backwards.status_code == 422
+    missing = await world.http.post(
+        "/api/v1/clients", json={"name": "X", "account_manager_id": str(am.id)}
+    )
+    missing_fields = {e["loc"][-1] for e in missing.json()["error"]["details"]["errors"]}
+    assert missing_fields == {
+        "industry",
+        "contact_name",
+        "contact_designation",
+        "contact_email",
+        "contact_phone",
+        "contract_start",
+        "contract_end",
+    }
+    cid = client["id"]
+    cleared = await world.http.patch(f"/api/v1/clients/{cid}", json={"contact_phone": None})
+    assert cleared.json()["error"]["message"] == "The contact phone can't be empty."
+    flipped = await world.http.patch(f"/api/v1/clients/{cid}", json={"contract_end": "2026-01-01"})
+    assert flipped.json()["error"]["message"] == (
+        "The contract end date must be on or after the start date."
+    )
+
+    # Lifecycle: On hold ↔ reactivate; Completed only after onboarding.
+    held = await world.http.post(f"/api/v1/clients/{cid}/status", json={"action": "hold"})
+    assert (held.json()["status"], held.json()["status_label"]) == ("on_hold", "On hold")
+    early = await world.http.post(f"/api/v1/clients/{cid}/status", json={"action": "complete"})
+    assert early.status_code == 422
+    back = await world.http.post(f"/api/v1/clients/{cid}/status", json={"action": "reactivate"})
+    assert back.json()["status"] == "onboarding"
+    again = await world.http.post(f"/api/v1/clients/{cid}/status", json={"action": "reactivate"})
+    assert again.status_code == 422
+    await world.create(am, name="Other", website="other.io")
+    await world.http.post(f"/api/v1/clients/{cid}/status", json={"action": "hold"})
+    counts = (await world.http.get("/api/v1/clients/counts")).json()
+    assert counts == {"all": 2, "onboarding": 1, "active": 0, "on_hold": 1, "completed": 0}
+    listed = (await world.http.get("/api/v1/clients", params={"status": "on_hold"})).json()
+    assert [c["name"] for c in listed["items"]] == ["Acme Ltd"]
+    assert listed["items"][0]["last_activity_at"] is not None
+    activity = [
+        a["summary"] for a in (await world.http.get(f"/api/v1/clients/{cid}/activity")).json()
+    ]
+    assert "Client status: Onboarding → On hold" in activity

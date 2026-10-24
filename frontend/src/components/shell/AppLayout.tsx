@@ -9,7 +9,25 @@ import { Navigate, Outlet, useLocation } from 'react-router';
 import { DocumentTitle } from '@/components/shell/DocumentTitle';
 import { Sidebar } from '@/components/shell/Sidebar';
 import { Topbar } from '@/components/shell/Topbar';
+import { useApprovals } from '@/features/approvals/api';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
+import { useTasks } from '@/features/tasks/api';
 import { useAuth } from '@/lib/auth-context';
+
+/** The rail with its live counters (my open tasks, requests waiting for my decision). */
+function CountedSidebar(props: { mobileOpen: boolean; onNavigate(): void }) {
+  const tasks = useTasks('mine');
+  const approvals = useApprovals('mine');
+  return (
+    <Sidebar
+      {...props}
+      badgeCounts={{
+        myOpenTasks: tasks.data?.length,
+        myPendingApprovals: approvals.data?.length,
+      }}
+    />
+  );
+}
 
 export function AppLayout() {
   const { status } = useAuth();
@@ -22,7 +40,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="min-h-full shell:grid shell:grid-cols-[228px_minmax(0,1fr)]">
+    <div className="min-h-full shell:grid shell:grid-cols-[248px_minmax(0,1fr)] shell:bg-[linear-gradient(to_right,var(--color-rail)_248px,transparent_248px)]">
       <DocumentTitle />
       <a
         href="#main"
@@ -30,21 +48,25 @@ export function AppLayout() {
       >
         Skip to main content
       </a>
-      <Sidebar mobileOpen={mobileOpen} onNavigate={() => setMobileOpen(false)} />
+      <CountedSidebar mobileOpen={mobileOpen} onNavigate={() => setMobileOpen(false)} />
       {mobileOpen ? (
         <button
           type="button"
           aria-label="Close menu"
-          className="fixed inset-0 z-30 bg-[rgb(8_20_26/.45)] shell:hidden"
+          className="fixed inset-0 z-30 bg-[rgb(14_18_64/.5)] shell:hidden"
           onClick={() => setMobileOpen(false)}
         />
       ) : null}
       <div className="flex min-w-0 flex-col">
-        <Topbar mobileOpen={mobileOpen} onToggleMenu={() => setMobileOpen((open) => !open)} />
+        <Topbar
+          mobileOpen={mobileOpen}
+          onToggleMenu={() => setMobileOpen((open) => !open)}
+          bell={<NotificationBell />}
+        />
         <main
           id="main"
           tabIndex={-1}
-          className="w-full max-w-[1320px] px-4 pt-[22px] pb-[60px] focus:outline-none"
+          className="w-full max-w-[1440px] px-4 pt-2 pb-[60px] focus:outline-none shell:px-8"
         >
           <Suspense fallback={null}>
             <Outlet />

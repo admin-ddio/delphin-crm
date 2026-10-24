@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -139,7 +139,7 @@ describe('account', () => {
   it('shows the profile and checks the new password', async () => {
     renderAt('/account', { status: 'authenticated', actor: ada });
     expect(await screen.findByRole('heading', { level: 1, name: 'My account' })).toBeInTheDocument();
-    expect(screen.getByText('Account Manager')).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByText('Account Manager')).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('Current password'), 'old-password');
     await userEvent.type(screen.getByLabelText('New password'), 'short');
     await userEvent.type(screen.getByLabelText('Confirm new password'), 'different');
@@ -155,7 +155,8 @@ describe('account', () => {
       Object.assign(state, { status: 'anonymous', actor: null });
     });
     expect(await screen.findByTestId('current-user')).toHaveTextContent('Ada Lovelace');
-    await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    await userEvent.click(screen.getByTestId('current-user'));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
     expect(signOut).toHaveBeenCalled();
     await vi.waitFor(() => expect(router.state.location.pathname).toBe('/login'));
   });

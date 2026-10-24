@@ -1,10 +1,13 @@
 /**
  * /dashboard. Layout and wording from the clickable demo ("Good day, …", stat
- * tiles, panels). Built from the modules that exist so far (clients, sign-ups);
- * the demo's task, approval, workload and finance tiles arrive with their modules.
+ * tiles, panels). Built from the modules that exist so far (clients, onboarding,
+ * projects, tasks, approvals, sign-ups); the workload and finance tiles arrive
+ * with their modules.
  * Every number is counted from the records the signed-in user may see.
  */
 import { useQuery } from '@tanstack/react-query';
+import { CircleCheck, ClipboardCheck, PauseCircle, Users } from 'lucide-react';
+import { useState } from 'react';
 
 import { Badge } from '@/components/ui/Badge';
 import { LinkButton } from '@/components/ui/Button';
@@ -12,31 +15,44 @@ import { Panel, StatCard } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Link } from '@/components/ui/Link';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { useClients, type ClientStatus } from '@/features/clients/api';
-import { STATUS_TONE } from '@/features/clients/ClientsListPage';
+import { useClientCounts, useClients } from '@/features/clients/api';
+import { STATUS_TONE } from '@/features/clients/api';
+import { useOnboardingBoard } from '@/features/onboarding/api';
+import { ONBOARDING_STATUS } from '@/features/onboarding/api';
+import { useTasks } from '@/features/tasks/api';
+import { TaskDrawer } from '@/features/tasks/TaskDrawer';
+import { TaskTable } from '@/features/tasks/TaskTable';
+import { useApprovals } from '@/features/approvals/api';
+import { ApprovalTable } from '@/features/approvals/ApprovalsPage';
 import { registrationsKey } from '@/features/team/TeamPage';
+import { Progress } from '@/components/ui/Data';
 import { api, unwrap } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { formatDate } from '@/lib/format';
 import { can, P, ROLE_LABELS, type RoleKey } from '@/lib/permissions';
 
-function useClientCount(status?: ClientStatus) {
-  const result = useClients({ status, page_size: 1 });
-  return result.data?.total;
-}
-
 function ClientTiles() {
-  const total = useClientCount();
-  const pending = useClientCount('contract_pending');
-  const onboarding = useClientCount('onboarding');
-  const active = useClientCount('active');
+  const counts = useClientCounts().data;
+  const total = counts?.all;
+  const onboarding = counts?.onboarding;
+  const active = counts?.active;
+  const held = counts?.on_hold;
   const show = (n: number | undefined) => (n === undefined ? '…' : n);
   return (
-    <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-4" data-testid="dashboard-tiles">
-      <StatCard label="Clients" value={show(total)} hint="All clients you can see" />
-      <StatCard label="Contract pending" value={show(pending)} />
-      <StatCard label="In onboarding" value={show(onboarding)} />
-      <StatCard label="Active clients" value={show(active)} hint="Onboarding completed" />
+    <div
+      className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-4"
+      data-testid="dashboard-tiles"
+    >
+      <StatCard label="Clients" value={show(total)} hint="All clients you can see" icon={Users} />
+      <StatCard label="In onboarding" value={show(onboarding)} icon={ClipboardCheck} tone="warn" />
+      <StatCard
+        label="Active clients"
+        value={show(active)}
+        hint="Onboarding completed"
+        icon={CircleCheck}
+        tone="ok"
+      />
+      <StatCard label="On hold" value={show(held)} icon={PauseCircle} tone="bad" />
     </div>
   );
 }
@@ -89,13 +105,117 @@ function RecentClients({ canCreate }: { canCreate: boolean }) {
                   <td>
                     <Badge tone={STATUS_TONE[client.status]}>{client.status_label}</Badge>
                   </td>
-                  <td className="font-mono text-xs tabular-nums">{formatDate(client.created_at)}</td>
+                  <td className="font-mono text-xs tabular-nums">
+                    {formatDate(client.created_at)}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : null}
+    </Panel>
+  );
+}
+
+function OnboardingPipeline() {
+  const board = useOnboardingBoard();
+  const open = board.data?.filter((row) => row.status !== 'completed') ?? [];
+  return (
+    <Panel
+      title="Onboarding pipeline"
+      flush
+      actions={
+        <Link className="link text-[13px]" to="/onboarding">
+          All onboarding →
+        </Link>
+      }
+    >
+      {board.isPending ? <EmptyState title="Loading…" /> : null}
+      {board.data && open.length === 0 ? <EmptyState title="No clients in onboarding" /> : null}
+      {open.length ? (
+        <div className="overflow-x-auto">
+          <table className="table" data-testid="onboarding-pipeline">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Progress</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {open.slice(0, 8).map((row) => {
+                const status = ONBOARDING_STATUS[row.status];
+                return (
+                  <tr key={row.client_id}>
+                    <td>
+                      <Link className="link" to={`/clients/${row.client_id}`}>
+                        {row.client_name}
+                      </Link>
+                      {row.current_step ? <div className="code">{row.current_step}</div> : null}
+                    </td>
+                    <td className="w-[40%]">
+                      <Progress
+                        value={row.progress}
+                        label={`${row.client_name} onboarding progress`}
+                      />
+                    </td>
+                    <td>
+                      <Badge tone={status.tone}>{status.label}</Badge>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </Panel>
+  );
+}
+
+function AwaitingDecision() {
+  const approvals = useApprovals('mine');
+  const [open, setOpen] = useState<string | null>(null);
+  if (!approvals.data?.length) return null;
+  return (
+    <Panel
+      title="Awaiting my decision"
+      flush
+      actions={
+        <Link className="link text-[13px]" to="/approvals">
+          All approvals →
+        </Link>
+      }
+    >
+      <ApprovalTable rows={approvals.data.slice(0, 8)} onOpen={setOpen} />
+      <TaskDrawer taskId={open} onClose={() => setOpen(null)} />
+    </Panel>
+  );
+}
+
+function MyOpenWork({ name }: { name: string }) {
+  const tasks = useTasks('mine');
+  const [open, setOpen] = useState<string | null>(null);
+  return (
+    <Panel
+      title="My open work"
+      flush
+      actions={
+        <Link className="link text-[13px]" to="/tasks">
+          All tasks →
+        </Link>
+      }
+    >
+      {tasks.isPending ? <EmptyState title="Loading…" /> : null}
+      {tasks.data?.length === 0 ? (
+        <EmptyState
+          title="Nothing assigned to you"
+          description={`Tasks assigned to ${name} appear here.`}
+        />
+      ) : null}
+      {tasks.data?.length ? <TaskTable tasks={tasks.data.slice(0, 8)} onOpen={setOpen} /> : null}
+      <TaskDrawer taskId={open} onClose={() => setOpen(null)} />
     </Panel>
   );
 }
@@ -145,6 +265,9 @@ export function Component() {
       {canSeeClients ? <ClientTiles /> : null}
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-4">
+        <MyOpenWork name={actor.fullName} />
+        <AwaitingDecision />
+        {canSeeClients ? <OnboardingPipeline /> : null}
         {canSeeClients ? <RecentClients canCreate={canCreate} /> : null}
         <Panel title="Quick actions">
           <ul className="flex flex-col gap-2 text-[13px]">
@@ -162,6 +285,21 @@ export function Component() {
                 </Link>
               </li>
             ) : null}
+            <li>
+              <Link className="link" to="/projects">
+                Projects
+              </Link>
+            </li>
+            <li>
+              <Link className="link" to="/tasks">
+                Tasks &amp; work
+              </Link>
+            </li>
+            <li>
+              <Link className="link" to="/approvals">
+                Approvals
+              </Link>
+            </li>
             {canApprove ? (
               <li>
                 <PendingSignUpsCount />
@@ -177,7 +315,7 @@ export function Component() {
         <Panel title="Coming next">
           <EmptyState
             title="More of the dashboard arrives with each module"
-            description="Open tasks, overdue work, approvals, onboarding pipeline, team workload and finance tiles appear as those modules are ported."
+            description="Team workload and finance tiles appear as those modules are ported."
           />
         </Panel>
       </div>

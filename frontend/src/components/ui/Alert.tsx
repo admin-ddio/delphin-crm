@@ -23,7 +23,11 @@ export function Alert({ tone = 'info', title, children, className }: AlertProps)
   return (
     <div
       role={tone === 'bad' ? 'alert' : 'status'}
-      className={cn('rounded-lg border px-3.5 py-[11px] text-[13px] text-fg', tones[tone], className)}
+      className={cn(
+        'rounded-lg border px-3.5 py-[11px] text-[13px] text-fg',
+        tones[tone],
+        className,
+      )}
     >
       {title ? <b className="block">{title}</b> : null}
       {children}

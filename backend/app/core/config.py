@@ -50,7 +50,10 @@ class Settings(BaseSettings):
     csrf_cookie_name: str = "delphin_csrf"
     csrf_header_name: str = "X-CSRF-Token"
     session_ttl_hours: int = Field(default=12, ge=1)
-    max_request_body_bytes: int = Field(default=10 * 1024 * 1024, ge=1024)
+    max_request_body_bytes: int = Field(default=12 * 1024 * 1024, ge=1024)
+    #: Private file storage root (local backend). Never served directly.
+    storage_dir: str = "/data/uploads"
+    max_upload_bytes: int = Field(default=10 * 1024 * 1024, ge=1024)
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     log_json: bool | None = None

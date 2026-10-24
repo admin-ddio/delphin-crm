@@ -1,121 +1,116 @@
 /**
- * /clients/:id and its tab routes (/clients/:id/<tab>). One component renders the
- * shared header + tab bar; the tab comes from the URL. Ported so far: Overview,
- * Edit, Activity. The other pilot tabs show their "not yet ported" state here.
+ * /clients/:id and its tabs (/clients/:id/<tab>), from the product mockups: header
+ * with logo, name, status and meta line, an Actions menu, and the onboarding tabs
+ * Overview · Questionnaire · Access · KPIs · Meetings · Team · Documents ·
+ * Projects · Activity · Summary. The tab comes from the URL.
  */
+import {
+  Activity,
+  ChevronDown,
+  ClipboardList,
+  FileText,
+  FolderKanban,
+  Globe,
+  LayoutDashboard,
+  ListChecks,
+  Lock,
+  MoreVertical,
+  Target,
+  CalendarDays,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
+import { useState } from 'react';
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router';
 
 import { Alert } from '@/components/ui/Alert';
+import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
-import { LinkButton } from '@/components/ui/Button';
+import { Button, LinkButton } from '@/components/ui/Button';
 import { Panel } from '@/components/ui/Card';
-import { KeyValue, Timeline } from '@/components/ui/Data';
+import { Timeline } from '@/components/ui/Data';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Menu } from '@/components/ui/Menu';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/Toast';
 import {
+  BUSINESS_TYPES,
+  labelOf,
+  STATUS_TONE,
+  useChangeClientStatus,
   useClient,
   useClientActivity,
   useUpdateClient,
   type ClientDetail,
 } from '@/features/clients/api';
-import { ClientForm, toClientBody, type ClientFormValues } from '@/features/clients/ClientForm';
-import { STATUS_TONE } from '@/features/clients/ClientsListPage';
+import { ClientForm, fromClient, toClientBody } from '@/features/clients/ClientForm';
+import { DocumentsTab } from '@/features/documents/DocumentsTab';
+import { MeetingsTab } from '@/features/meetings/MeetingsTab';
+import { useOnboarding } from '@/features/onboarding/api';
+import { AccessTab } from '@/features/onboarding/AccessTab';
+import { KpisTab } from '@/features/onboarding/KpisTab';
+import { OverviewTab } from '@/features/onboarding/OverviewTab';
+import { QuestionnaireLinkDialog } from '@/features/onboarding/QuestionnaireLinkDialog';
+import { QuestionnaireTab } from '@/features/onboarding/QuestionnaireTab';
+import { SummaryTab } from '@/features/onboarding/SummaryTab';
+import { TeamTab } from '@/features/onboarding/TeamTab';
+import { ClientProjectsTab } from '@/features/projects/ClientProjectsTab';
 import { ApiError } from '@/lib/api-client';
-import { formatDate, formatDateTime } from '@/lib/format';
+import { useAuth } from '@/lib/auth-context';
+import { countryName, flag } from '@/lib/countries';
+import { formatDateTime } from '@/lib/format';
+import { can, P } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 
-/** Pilot client tabs (scaffold brief §7), in the pilot's route order. */
-const TABS: { slug: string; label: string }[] = [
-  { slug: '', label: 'Overview' },
-  { slug: 'contacts', label: 'Contacts' },
-  { slug: 'onboarding', label: 'Onboarding' },
-  { slug: 'projects', label: 'Projects' },
-  { slug: 'tasks', label: 'Tasks' },
-  { slug: 'services', label: 'Services' },
-  { slug: 'kpis', label: 'KPIs' },
-  { slug: 'meetings', label: 'Meetings' },
-  { slug: 'communications', label: 'Communications' },
-  { slug: 'documents', label: 'Documents' },
-  { slug: 'approvals', label: 'Approvals' },
-  { slug: 'billing', label: 'Billing' },
-  { slug: 'activity', label: 'Activity' },
+const TABS: { slug: string; label: string; icon: LucideIcon }[] = [
+  { slug: '', label: 'Overview', icon: LayoutDashboard },
+  { slug: 'questionnaire', label: 'Questionnaire', icon: ClipboardList },
+  { slug: 'access', label: 'Access', icon: Lock },
+  { slug: 'kpis', label: 'KPIs', icon: Target },
+  { slug: 'meetings', label: 'Meetings', icon: CalendarDays },
+  { slug: 'team', label: 'Team', icon: Users },
+  { slug: 'documents', label: 'Documents', icon: FileText },
+  { slug: 'projects', label: 'Projects', icon: FolderKanban },
+  { slug: 'activity', label: 'Activity', icon: Activity },
+  { slug: 'summary', label: 'Summary', icon: ListChecks },
 ];
+/** Earlier links (e.g. /clients/:id/onboarding) land on the summary. */
+const ALIASES: Record<string, string> = { onboarding: 'summary' };
 
 const crumb = { label: 'Clients', to: '/clients' };
 
 function TabBar({ id }: { id: string }) {
   return (
-    <nav aria-label="Client sections" className="mb-4 flex gap-0.5 overflow-x-auto border-b border-line">
-      {TABS.map((tab) => (
+    <nav
+      aria-label="Client sections"
+      className="mb-6 flex gap-1 overflow-x-auto border-b border-line"
+    >
+      {TABS.map(({ slug, label, icon: Icon }) => (
         <NavLink
-          key={tab.slug || 'overview'}
-          to={tab.slug ? `/clients/${id}/${tab.slug}` : `/clients/${id}`}
+          key={slug || 'overview'}
+          to={slug ? `/clients/${id}/${slug}` : `/clients/${id}`}
           end
           className={({ isActive }) =>
             cn(
-              '-mb-px border-b-2 px-3 py-2 font-medium whitespace-nowrap',
-              isActive ? 'border-accent text-accent-strong' : 'border-transparent text-muted hover:text-fg',
+              '-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap',
+              isActive
+                ? 'border-accent text-accent'
+                : 'border-transparent text-muted hover:text-fg',
             )
           }
         >
-          {tab.label}
+          <Icon aria-hidden className="size-4" />
+          {label}
         </NavLink>
       ))}
     </nav>
   );
 }
 
-function Overview({ client }: { client: ClientDetail }) {
-  return (
-    <div className="flex flex-col gap-4">
-      <Alert tone="info" title="Onboarding isn't ported yet">
-        The 13-step onboarding workflow (contract → access → KPIs → kickoffs → review) will appear
-        on the Onboarding tab. Until then the client stays at “{client.status_label}”.
-      </Alert>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-4">
-        <Panel title="Profile">
-          <KeyValue
-            items={[
-              ['Legal name', client.name],
-              [
-                'Website',
-                client.website ? (
-                  <a className="link" href={client.website.startsWith('http') ? client.website : `https://${client.website}`} target="_blank" rel="noreferrer noopener">
-                    {client.website}
-                  </a>
-                ) : null,
-              ],
-              ['Industry', client.industry],
-              [
-                'Primary contact',
-                client.contact_name || client.contact_email ? (
-                  <span>
-                    {client.contact_name}{' '}
-                    {client.contact_email ? <span className="code">{client.contact_email}</span> : null}
-                  </span>
-                ) : null,
-              ],
-              ['Account Manager', client.account_manager.full_name],
-              ['Created', formatDate(client.created_at)],
-            ]}
-          />
-        </Panel>
-        <Panel title="Internal team">
-          <EmptyState
-            title="No team assigned"
-            description="Team assignment arrives with the onboarding kickoff step."
-          />
-        </Panel>
-      </div>
-    </div>
-  );
-}
-
 function ActivityTab({ id }: { id: string }) {
   const activity = useClientActivity(id);
   return (
-    <Panel title="Activity timeline">
+    <Panel title="Activity Timeline" icon={Activity}>
       {activity.isPending ? <p className="text-muted">Loading…</p> : null}
       {activity.data?.length === 0 ? <EmptyState title="No activity" /> : null}
       {activity.data?.length ? (
@@ -135,6 +130,7 @@ function EditTab({ client }: { client: ClientDetail }) {
   const update = useUpdateClient(client.id);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [busy, setBusy] = useState(false);
   if (!client.can_edit) {
     return (
       <Alert tone="bad" title="Access denied">
@@ -142,36 +138,108 @@ function EditTab({ client }: { client: ClientDetail }) {
       </Alert>
     );
   }
-  const defaults: ClientFormValues = {
-    name: client.name,
-    website: client.website ?? '',
-    industry: client.industry ?? '',
-    contactName: client.contact_name ?? '',
-    contactEmail: client.contact_email ?? '',
-    accountManagerId: client.account_manager.id,
-    confirmDifferentBusiness: false,
-  };
   return (
-    <Panel title="Edit client">
+    <div className="flex flex-col gap-4">
       <ClientForm
         key={client.updated_at}
-        defaultValues={defaults}
-        submitLabel="Save changes"
-        cancelTo={`/clients/${client.id}`}
+        formId="client-edit-form"
+        defaultValues={fromClient(client)}
+        onBusyChange={setBusy}
         onSubmit={async (values) => {
           await update.mutateAsync(toClientBody(values));
           toast({ title: 'Client updated.' });
           navigate(`/clients/${client.id}`);
         }}
       />
-    </Panel>
+      <div className="flex gap-3">
+        <Button type="submit" form="client-edit-form" variant="primary" disabled={busy}>
+          {busy ? 'Saving…' : 'Save changes'}
+        </Button>
+        <LinkButton to={`/clients/${client.id}`}>Cancel</LinkButton>
+      </div>
+    </div>
+  );
+}
+
+function HeaderActions({ client }: { client: ClientDetail }) {
+  const { actor } = useAuth();
+  const onboarding = useOnboarding(client.id);
+  const change = useChangeClientStatus(client.id);
+  const { toast } = useToast();
+  const [linkOpen, setLinkOpen] = useState(false);
+  const detail = onboarding.data;
+  const manage = detail?.permissions.manage ?? false;
+  const run = async (action: 'hold' | 'complete' | 'reactivate', done: string) => {
+    try {
+      await change.mutateAsync(action);
+      toast({ title: done });
+    } catch (error) {
+      toast({
+        title: error instanceof ApiError ? error.message : 'Something went wrong. Try again.',
+        tone: 'error',
+      });
+    }
+  };
+  return (
+    <>
+      <Menu
+        label="Client actions"
+        trigger={
+          <span className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent shadow-sm hover:bg-accent-strong">
+            <MoreVertical aria-hidden className="size-4" />
+            Actions
+            <ChevronDown aria-hidden className="size-4" />
+          </span>
+        }
+        items={[
+          { label: 'Edit client', to: `/clients/${client.id}/edit`, hidden: !client.can_edit },
+          {
+            label: 'Send questionnaire link',
+            hidden: !manage || detail?.questionnaire.status === 'submitted',
+            onSelect: () => setLinkOpen(true),
+          },
+          {
+            label: 'Schedule meeting',
+            to: `/clients/${client.id}/meetings?new=1`,
+            hidden: !detail?.permissions.schedule_meetings,
+          },
+          {
+            label: 'Create project',
+            to: `/projects/new?client=${client.id}`,
+            hidden: !detail?.completed_at || !can(actor?.permissions ?? [], P.projectsCreate),
+          },
+          { label: 'Onboarding summary', to: `/clients/${client.id}/summary` },
+          {
+            label: 'Put on hold',
+            hidden: !client.can_edit || !['onboarding', 'active'].includes(client.status),
+            onSelect: () => void run('hold', `${client.name} is on hold.`),
+          },
+          {
+            label: 'Mark completed',
+            hidden: !client.can_edit || client.status !== 'active',
+            onSelect: () => void run('complete', `${client.name} marked completed.`),
+          },
+          {
+            label: 'Reactivate',
+            hidden: !client.can_edit || !['on_hold', 'completed'].includes(client.status),
+            onSelect: () => void run('reactivate', `${client.name} reactivated.`),
+          },
+        ]}
+      />
+      <QuestionnaireLinkDialog
+        clientId={client.id}
+        open={linkOpen}
+        onClose={() => setLinkOpen(false)}
+      />
+    </>
   );
 }
 
 export function Component() {
   const { id = '' } = useParams();
   const location = useLocation();
-  const tab = location.pathname.split('/')[3] ?? '';
+  const raw = location.pathname.split('/')[3] ?? '';
+  const tab = ALIASES[raw] ?? raw;
   const client = useClient(id);
 
   if (client.isPending) return <PageHeader title="Loading…" crumb={crumb} />;
@@ -190,38 +258,67 @@ export function Component() {
   }
 
   const data = client.data;
-  const current = TABS.find((t) => t.slug === tab);
+  const known = tab === 'edit' || TABS.some((t) => t.slug === tab);
+  const meta = [
+    data.website ? (
+      <span key="w" className="inline-flex items-center gap-1.5">
+        <Globe aria-hidden className="size-4" />
+        {data.website}
+      </span>
+    ) : null,
+    data.industry,
+    data.country ? `${flag(data.country)} ${countryName(data.country)}` : null,
+    labelOf(BUSINESS_TYPES, data.business_type),
+  ].filter(Boolean);
+
   return (
     <>
       <PageHeader
         crumb={crumb}
+        leading={<Avatar name={data.name} size="lg" />}
         title={
-          <span className="flex flex-wrap items-center gap-2">
+          <span className="flex flex-wrap items-center gap-3">
             {data.name}
             <Badge tone={STATUS_TONE[data.status]}>{data.status_label}</Badge>
           </span>
         }
         description={
-          <>
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {meta.map((item, i) => (
+              <span key={i} className="inline-flex items-center gap-3">
+                {i ? (
+                  <span aria-hidden className="text-faint">
+                    ·
+                  </span>
+                ) : null}
+                {item}
+              </span>
+            ))}
+            <span aria-hidden className="text-faint">
+              ·
+            </span>
             <span className="code">{data.code}</span>
-            {data.domain ? ` · ${data.domain}` : ''} · AM: {data.account_manager.full_name}
-          </>
+          </span>
         }
-        actions={
-          data.can_edit && tab !== 'edit' ? (
-            <LinkButton to={`/clients/${data.id}/edit`}>Edit client</LinkButton>
-          ) : null
-        }
+        actions={tab !== 'edit' ? <HeaderActions client={data} /> : null}
       />
       {tab !== 'edit' ? <TabBar id={data.id} /> : null}
-      {tab === '' ? <Overview client={data} /> : null}
+      {tab === '' ? <OverviewTab client={data} /> : null}
       {tab === 'edit' ? <EditTab client={data} /> : null}
+      {tab === 'questionnaire' ? <QuestionnaireTab client={data} /> : null}
+      {tab === 'access' ? <AccessTab clientId={data.id} /> : null}
+      {tab === 'kpis' ? <KpisTab clientId={data.id} /> : null}
+      {tab === 'meetings' ? <MeetingsTab client={data} /> : null}
+      {tab === 'team' ? <TeamTab clientId={data.id} /> : null}
+      {tab === 'documents' ? <DocumentsTab clientId={data.id} /> : null}
+      {tab === 'projects' ? <ClientProjectsTab clientId={data.id} /> : null}
       {tab === 'activity' ? <ActivityTab id={data.id} /> : null}
-      {tab !== '' && tab !== 'edit' && tab !== 'activity' ? (
+      {tab === 'summary' ? <SummaryTab client={data} /> : null}
+      {!known ? (
         <Panel flush>
           <EmptyState
-            title={`${current?.label ?? 'This tab'} isn't ported yet. See PARITY.md`}
-            description={<span className="code">frontend/src/features/clients/PARITY.md</span>}
+            title="This section isn't available yet"
+            description="Contacts, services, billing and communications arrive with their modules."
           />
         </Panel>
       ) : null}

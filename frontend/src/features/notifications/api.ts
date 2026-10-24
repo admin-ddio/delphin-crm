@@ -1,17 +1,32 @@
-/**
- * Typed TanStack Query hooks for the notifications module (stubs).
- *
- * Pattern once endpoints exist (types come from the generated schema, never by hand):
- *
- *   export function useNotificationsList(params: ListParams) {
- *     return useQuery({
- *       queryKey: notificationsKeys.list(params),
- *       queryFn: async () => unwrap(await api.GET('/api/v1/notifications', { params: { query: params } })),
- *     });
- *   }
- */
-export const notificationsKeys = {
-  all: ['notifications'] as const,
-  list: (params: Record<string, unknown> = {}) => ['notifications', 'list', params] as const,
-  detail: (id: string) => ['notifications', 'detail', id] as const,
-};
+/** The signed-in user's notification bell. */
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+import type { components } from '@/api/schema';
+import { api, unwrap } from '@/lib/api-client';
+
+export type NotificationList = components['schemas']['NotificationList'];
+
+export const notificationsKey = ['notifications', 'mine'] as const;
+
+export function useNotifications() {
+  return useQuery({
+    queryKey: notificationsKey,
+    queryFn: async () => unwrap(await api.GET('/api/v1/notifications')),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useMarkRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      id === 'all'
+        ? unwrap(await api.POST('/api/v1/notifications/read-all'))
+        : unwrap(
+            await api.POST('/api/v1/notifications/{notification_id}/read', {
+              params: { path: { notification_id: id } },
+            }),
+          ),
+    onSuccess: (data) => queryClient.setQueryData(notificationsKey, data),
+  });
+}

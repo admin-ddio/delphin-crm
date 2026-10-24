@@ -22,6 +22,8 @@ from app.modules.clients.schemas import (
     ClientListItem,
     ClientStatus,
     ClientUpdate,
+    StatusChange,
+    StatusCounts,
 )
 from app.modules.clients.service import ClientService
 
@@ -31,6 +33,9 @@ router = APIRouter(prefix="/clients", tags=["clients"])
 
 NOT_FOUND: dict[int | str, dict[str, Any]] = {
     404: {"model": ErrorEnvelope, "description": "Not found, or outside your access"}
+}
+RULES: dict[int | str, dict[str, Any]] = {
+    422: {"model": ErrorEnvelope, "description": "Business rule violated"}
 }
 DUPLICATE: dict[int | str, dict[str, Any]] = {
     409: {
@@ -73,6 +78,12 @@ async def create_client(
     service: Service,
 ) -> ClientDetail:
     return await service.create(actor, body)
+
+
+@router.get("/counts", response_model=StatusCounts, responses=AUTH_ERROR_RESPONSES)
+async def status_counts(actor: CurrentActor, service: Service) -> StatusCounts:
+    """Visible clients per status (list tabs)."""
+    return await service.status_counts(actor)
 
 
 @router.get(
@@ -122,3 +133,15 @@ async def client_activity(
 ) -> list[ClientActivity]:
     """Newest first (last 100)."""
     return await service.activity(actor, client_id)
+
+
+@router.post(
+    "/{client_id}/status",
+    response_model=ClientDetail,
+    responses={**AUTH_ERROR_RESPONSES, **NOT_FOUND, **RULES},
+)
+async def change_status(
+    client_id: uuid.UUID, body: StatusChange, actor: CurrentActor, service: Service
+) -> ClientDetail:
+    """Put on hold, mark completed, or reactivate (the client's Account Manager)."""
+    return await service.change_status(actor, client_id, body.action)

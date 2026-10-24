@@ -7,38 +7,46 @@
  * as soon as the pilot source is placed in reference/pilot/.
  * tests/unit/token-drift.test.ts fails on any difference once it exists.
  *
- * Interim values come from the clickable demo
- * (reference/pilot/clickable-demo/delphin-agency-demo.html): palette, dark
- * theme, IBM Plex fonts, 860 px shell breakpoint and component look.
- * See docs/clickable-demo-findings.md.
+ * Interim values come from the product owner's UI mockups (2026-10-19):
+ * dark navy sidebar, purple primary, white cards on a cool grey canvas,
+ * soft status pills, Inter. Layout breakpoint (861 px shell) unchanged.
+ * See docs/clickable-demo-findings.md for the earlier demo-derived values.
  * ==========================================================================
  */
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #f4f7f8;
+  --color-bg: #f6f7fb;
   --color-surface: #ffffff;
-  --color-sunk: #eaf0f2;
-  --color-line: #d6e0e4;
-  --color-line-soft: #e6edf0;
-  --color-fg: #142229;
-  --color-muted: #5a6d75;
-  --color-faint: #8697a0;
-  --color-accent: #156a92;
-  --color-accent-strong: #0f5374;
-  --color-accent-soft: #e2f0f6;
+  --color-sunk: #f3f4f9;
+  --color-line: #e4e6ef;
+  --color-line-soft: #eef0f6;
+  --color-fg: #111531;
+  --color-muted: #5d6479;
+  --color-faint: #8d93a6;
+  --color-accent: #5534e8;
+  --color-accent-strong: #4424cf;
+  --color-accent-soft: #efebfe;
   --color-on-accent: #ffffff;
-  --color-ok: #1e7f55;
-  --color-ok-soft: #e1f3ea;
-  --color-warn: #9a6400;
-  --color-warn-soft: #fbf0d9;
-  --color-bad: #b3372c;
-  --color-bad-soft: #fbe6e3;
-  --color-info: #5b4bb5;
-  --color-info-soft: #ece9fa;
+  --color-ok: #15803d;
+  --color-ok-soft: #e8f6ed;
+  --color-warn: #c2620a;
+  --color-warn-soft: #fff4e6;
+  --color-bad: #d92d2d;
+  --color-bad-soft: #fdecec;
+  --color-info: #2a62d8;
+  --color-info-soft: #e9f0fd;
 
-  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  /* Navy rail. */
+  --color-rail: #0e1240;
+  --color-rail-fg: #c9cce6;
+  --color-rail-muted: #7d82b0;
+  --color-rail-hover: #1b2060;
+
+  --font-sans: "Inter Variable", "Inter", "Segoe UI", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --shadow-card: 0 1px 2px rgb(17 21 49 / 0.04), 0 2px 8px rgb(17 21 49 / 0.04);
 
   /* Desktop shell (rail always visible) from 861 px; below it the rail is a drawer. */
   --breakpoint-shell: 53.8125rem;
@@ -47,51 +55,55 @@
 /* Dark theme: follows the OS unless data-theme="light"; data-theme="dark" forces it. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg: #0f1a1f;
-    --color-surface: #152329;
-    --color-sunk: #1b2c33;
-    --color-line: #2a3e46;
-    --color-line-soft: #223540;
-    --color-fg: #e3ecef;
-    --color-muted: #9db0b8;
-    --color-faint: #6f838c;
-    --color-accent: #5fb3d9;
-    --color-accent-strong: #84c6e4;
-    --color-accent-soft: #173746;
-    --color-on-accent: #08161c;
+    --color-bg: #0b0e24;
+    --color-surface: #141938;
+    --color-sunk: #1a2045;
+    --color-line: #2a3160;
+    --color-line-soft: #222851;
+    --color-fg: #e8eaf6;
+    --color-muted: #a3a8c8;
+    --color-faint: #747aa3;
+    --color-accent: #8f7bff;
+    --color-accent-strong: #a999ff;
+    --color-accent-soft: #2a2466;
+    --color-on-accent: #0b0e24;
     --color-ok: #5cc995;
-    --color-ok-soft: #133a2b;
-    --color-warn: #e2b04f;
-    --color-warn-soft: #3a2f15;
-    --color-bad: #ef7d70;
-    --color-bad-soft: #3d1d1a;
-    --color-info: #a99cf0;
-    --color-info-soft: #2a2550;
+    --color-ok-soft: #13372b;
+    --color-warn: #f0a24a;
+    --color-warn-soft: #3a2a14;
+    --color-bad: #f27b6f;
+    --color-bad-soft: #3d1c1c;
+    --color-info: #7ea8f5;
+    --color-info-soft: #1b2a4d;
+    --color-rail: #080a1d;
+    --color-rail-hover: #161b45;
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --color-bg: #0f1a1f;
-  --color-surface: #152329;
-  --color-sunk: #1b2c33;
-  --color-line: #2a3e46;
-  --color-line-soft: #223540;
-  --color-fg: #e3ecef;
-  --color-muted: #9db0b8;
-  --color-faint: #6f838c;
-  --color-accent: #5fb3d9;
-  --color-accent-strong: #84c6e4;
-  --color-accent-soft: #173746;
-  --color-on-accent: #08161c;
+  --color-bg: #0b0e24;
+  --color-surface: #141938;
+  --color-sunk: #1a2045;
+  --color-line: #2a3160;
+  --color-line-soft: #222851;
+  --color-fg: #e8eaf6;
+  --color-muted: #a3a8c8;
+  --color-faint: #747aa3;
+  --color-accent: #8f7bff;
+  --color-accent-strong: #a999ff;
+  --color-accent-soft: #2a2466;
+  --color-on-accent: #0b0e24;
   --color-ok: #5cc995;
-  --color-ok-soft: #133a2b;
-  --color-warn: #e2b04f;
-  --color-warn-soft: #3a2f15;
-  --color-bad: #ef7d70;
-  --color-bad-soft: #3d1d1a;
-  --color-info: #a99cf0;
-  --color-info-soft: #2a2550;
+  --color-ok-soft: #13372b;
+  --color-warn: #f0a24a;
+  --color-warn-soft: #3a2a14;
+  --color-bad: #f27b6f;
+  --color-bad-soft: #3d1c1c;
+  --color-info: #7ea8f5;
+  --color-info-soft: #1b2a4d;
+  --color-rail: #080a1d;
+  --color-rail-hover: #161b45;
   color-scheme: dark;
 }
 
@@ -129,31 +141,35 @@
 
 @layer components {
   .card {
-    @apply min-w-0 rounded-lg border border-line bg-surface;
+    @apply min-w-0 rounded-xl border border-line bg-surface shadow-(--shadow-card);
   }
 
   .label {
-    @apply flex flex-col gap-1 text-xs font-medium text-muted;
+    @apply flex flex-col gap-1.5 text-[13px] font-medium text-fg;
   }
 
   .input {
-    @apply rounded-md border border-line bg-surface px-[9px] py-[7px] text-[13px] text-fg;
+    @apply rounded-lg border border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-faint focus:border-accent focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent/30;
   }
 
   .table {
-    @apply w-full border-collapse text-[13px];
+    @apply w-full border-collapse text-[13.5px];
   }
 
   .table th {
-    @apply border-b border-line bg-sunk px-3 py-2 text-left text-[11px] font-semibold tracking-[.06em] whitespace-nowrap text-muted uppercase;
+    @apply border-b border-line bg-sunk px-4 py-3 text-left text-[11.5px] font-semibold tracking-[.06em] whitespace-nowrap text-muted uppercase;
   }
 
   .table td {
-    @apply border-b border-line-soft px-3 py-[9px] align-middle;
+    @apply border-b border-line-soft px-4 py-3.5 align-middle;
   }
 
   .table tr:last-child td {
     @apply border-b-0;
+  }
+
+  .table tbody tr {
+    @apply transition-colors hover:bg-sunk/60;
   }
 
   .link {

@@ -15,7 +15,10 @@ export function can(granted: readonly Permission[], permission: Permission): boo
   return granted.includes(WILDCARD) || granted.includes(permission);
 }
 
-export function canAny(granted: readonly Permission[], permissions: readonly Permission[]): boolean {
+export function canAny(
+  granted: readonly Permission[],
+  permissions: readonly Permission[],
+): boolean {
   return permissions.some((permission) => can(granted, permission));
 }
 
@@ -34,6 +37,7 @@ export const P = {
   accessVerify: 'onboarding.access_verify',
   kpiConfirm: 'onboarding.kpi_confirm',
   projectsCreate: 'projects.create',
+  projectsViewAll: 'projects.view_all',
   tasksCreate: 'tasks.create',
   tasksReview: 'tasks.review',
   clientDecisionRecord: 'approvals.client_decision',
@@ -42,7 +46,36 @@ export const P = {
   financeManage: 'finance.manage',
   financeView: 'finance.view',
   usersApprove: 'users.approve',
+  meetingsManage: 'meetings.manage',
+  hrManage: 'hr.manage',
+  hrViewAll: 'hr.view_all',
+  hrPersonalView: 'hr.personal.view',
+  // Organization & Role Settings (Organization brief §8).
+  orgView: 'org.view',
+  orgDirectoryView: 'org.directory.view',
+  orgTeamView: 'org.team.view',
+  orgDepartmentsManage: 'org.departments.manage',
+  orgDesignationsManage: 'org.designations.manage',
+  orgReportingManage: 'org.reporting.manage',
+  orgProjectsAssign: 'org.projects.assign',
+  orgRolesManage: 'org.roles.manage',
+  orgRolesAssign: 'org.roles.assign',
+  orgAuditView: 'org.audit.view',
 } as const;
+
+/** Any of these opens Organization & Role Settings beyond the read-only chart. */
+export const ORG_SETTINGS: readonly Permission[] = [
+  P.orgDepartmentsManage,
+  P.orgDesignationsManage,
+  P.orgReportingManage,
+  P.orgProjectsAssign,
+  P.orgRolesManage,
+  P.orgRolesAssign,
+  P.orgAuditView,
+];
+
+/** Everyone signed in may look at the organisation and the directory. */
+const EVERYONE: readonly Permission[] = [P.orgView, P.orgDirectoryView];
 
 export const ROLE_KEYS = [
   'super_admin',
@@ -52,6 +85,8 @@ export const ROLE_KEYS = [
   'team_lead',
   'employee',
   'finance',
+  'hr_admin',
+  'org_admin',
 ] as const;
 export type RoleKey = (typeof ROLE_KEYS)[number];
 
@@ -63,6 +98,8 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
   team_lead: 'Team Lead',
   employee: 'Employee / Specialist',
   finance: 'Finance',
+  hr_admin: 'HR / Operations Admin',
+  org_admin: 'Organization Admin',
 };
 
 /**
@@ -71,8 +108,10 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
  */
 export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, readonly Permission[]> = {
   super_admin: [WILDCARD],
-  admin: [],
+  admin: [...EVERYONE],
   account_manager: [
+    ...EVERYONE,
+    P.orgTeamView,
     P.clientsCreate,
     P.clientsViewAll,
     P.clientsUpdate,
@@ -80,13 +119,48 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleKey, readonly Permission[]> = 
     P.accessVerify,
     P.kpiConfirm,
     P.projectsCreate,
+    P.projectsViewAll,
     P.tasksCreate,
     P.clientDecisionRecord,
     P.retainersManage,
     P.financeView,
+    P.meetingsManage,
   ],
-  project_manager: [P.clientsViewAll, P.projectsCreate, P.tasksCreate, P.tasksReview, P.accessVerify, P.jobsRun],
-  team_lead: [P.tasksCreate, P.tasksReview, P.accessVerify],
-  employee: [],
-  finance: [P.clientsViewAll, P.financeManage, P.financeView],
+  project_manager: [
+    ...EVERYONE,
+    P.orgTeamView,
+    P.orgProjectsAssign,
+    P.clientsViewAll,
+    P.projectsCreate,
+    P.projectsViewAll,
+    P.tasksCreate,
+    P.tasksReview,
+    P.accessVerify,
+    P.jobsRun,
+    P.meetingsManage,
+  ],
+  team_lead: [
+    ...EVERYONE,
+    P.orgTeamView,
+    P.tasksCreate,
+    P.tasksReview,
+    P.accessVerify,
+    P.meetingsManage,
+  ],
+  employee: [...EVERYONE],
+  finance: [...EVERYONE, P.clientsViewAll, P.projectsViewAll, P.financeManage, P.financeView],
+  // Employee records only; organisation structure belongs to org_admin.
+  hr_admin: [...EVERYONE, P.orgTeamView, P.hrManage, P.hrViewAll, P.hrPersonalView],
+  // Organization brief §7: this module only, nothing else.
+  org_admin: [
+    ...EVERYONE,
+    P.orgTeamView,
+    P.orgDepartmentsManage,
+    P.orgDesignationsManage,
+    P.orgReportingManage,
+    P.orgProjectsAssign,
+    P.orgRolesManage,
+    P.orgRolesAssign,
+    P.orgAuditView,
+  ],
 };
