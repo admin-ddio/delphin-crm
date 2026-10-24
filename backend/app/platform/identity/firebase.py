@@ -7,8 +7,8 @@ is a verified identity: uid, e-mail and whether that e-mail is verified.
 
 The Admin SDK is synchronous, so calls run in a worker thread. With
 FIREBASE_AUTH_EMULATOR_HOST set, the SDK talks to the local emulator and needs
-no credentials; otherwise user management needs GOOGLE_APPLICATION_CREDENTIALS
-(ID-token verification only needs the project ID).
+no credentials; otherwise every call, ID-token verification included, needs
+GOOGLE_APPLICATION_CREDENTIALS (firebase-admin 7 builds its client from them).
 """
 
 from __future__ import annotations

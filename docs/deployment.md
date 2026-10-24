@@ -42,8 +42,6 @@ the password or to repair an account first created in the emulator.
 
 ```bash
 docker compose -f compose.yaml -f compose.prod.yaml run --rm \
-  -v /path/to/service-account.json:/run/secrets/firebase.json:ro \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/firebase.json \
   backend python scripts/seed_super_admin.py <email> "<name>"
 ```
 
@@ -65,9 +63,11 @@ See ADR-0009. Development uses the local emulator automatically. For a real proj
    `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_APP_ID`, and
    `FIREBASE_PROJECT_ID` (also used as the web `projectId`).
 3. Set `VITE_FIREBASE_USE_EMULATOR=false` and leave `FIREBASE_AUTH_EMULATOR_HOST` empty.
-4. **Project settings → Service accounts → Generate new private key**. Mount the JSON into the backend
-   container as a secret and set `GOOGLE_APPLICATION_CREDENTIALS` to its path. It's needed to create
-   users (invitations); never commit it.
+4. **Project settings → Service accounts → Generate new private key**. Save it as
+   `secrets/firebase-service-account.json` (git-ignored; or set `FIREBASE_CREDENTIALS_FILE`).
+   `compose.prod.yaml` mounts it into the backend, which needs it for every Firebase call, sign-in
+   included. The container runs as uid 10001, so make the file readable to it, e.g.
+   `chmod 700 secrets && chmod 444 secrets/firebase-service-account.json`. Never commit it.
 5. **Authentication → Settings → Authorized domains**: add your app's domain.
 6. Optional: **Authentication → Templates → Customize action URL** →
    `https://<your-domain>/auth/action`, so verification and reset links open inside the app.

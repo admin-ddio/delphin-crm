@@ -12,10 +12,8 @@ the command line, so it stays out of shell history and the process list.
 A real Firebase project needs GOOGLE_APPLICATION_CREDENTIALS (a service-account
 key) to manage users; with FIREBASE_AUTH_EMULATOR_HOST set it uses the emulator.
 
-Usage (production; prompts for the password):
+Usage (production; compose.prod.yaml mounts the key; prompts for the password):
     docker compose -f compose.yaml -f compose.prod.yaml run --rm \\
-        -v /path/to/service-account.json:/run/secrets/firebase.json:ro \\
-        -e GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/firebase.json \\
         backend python scripts/seed_super_admin.py admin@example.com "Full Name"
 """
 
@@ -138,6 +136,10 @@ async def run(email: str, full_name: str) -> int:
         uid = await asyncio.to_thread(
             upsert_firebase_user, settings.firebase_project_id, email, full_name, password
         )
+    except OSError as exc:
+        print(f"cannot read the service-account key: {exc}", file=sys.stderr)
+        print("make it readable by the container user: chown 10001 <key file>", file=sys.stderr)
+        return 1
     except (FirebaseError, ValueError) as exc:
         print(f"Firebase: {exc}", file=sys.stderr)
         if not os.environ.get("FIREBASE_AUTH_EMULATOR_HOST"):
