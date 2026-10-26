@@ -687,7 +687,9 @@ test.describe('people and organization settings', () => {
     await pickOption(page.getByLabel('Employee', { exact: true }), member);
     await expect(page.getByText('What applies now')).toBeVisible();
     await page.getByRole('button', { name: 'Add relationship' }).click();
-    await page.getByLabel('Relationship 2', { exact: true }).selectOption({ label: 'Performance reviewer' });
+    await page
+      .getByLabel('Relationship 2', { exact: true })
+      .selectOption({ label: 'Performance reviewer' });
     await pickOption(page.getByLabel('Reports to').nth(1), lead);
     await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
     await page.getByRole('button', { name: 'Preview changes' }).click();

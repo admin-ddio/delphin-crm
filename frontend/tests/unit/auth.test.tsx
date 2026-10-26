@@ -31,7 +31,9 @@ function renderAt(path: string, auth: Partial<AuthState>) {
   vi.spyOn(authContext, 'useAuth').mockImplementation(() => state);
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <ToastProvider>
         <RouterProvider router={router} />
       </ToastProvider>
@@ -98,7 +100,9 @@ describe('sign in', () => {
     expect(await screen.findByText("Don't have an account?")).toBeInTheDocument();
     await userEvent.click(screen.getByRole('link', { name: 'Sign up' }));
     await vi.waitFor(() => expect(router.state.location.pathname).toBe('/signup'));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Create account' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Create account' }),
+    ).toBeInTheDocument();
   });
 
   it('explains when the account is waiting for approval', async () => {
@@ -138,7 +142,9 @@ describe('sign in', () => {
 describe('account', () => {
   it('shows the profile and checks the new password', async () => {
     renderAt('/account', { status: 'authenticated', actor: ada });
-    expect(await screen.findByRole('heading', { level: 1, name: 'My account' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'My account' }),
+    ).toBeInTheDocument();
     expect(within(screen.getByRole('main')).getByText('Account Manager')).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('Current password'), 'old-password');
     await userEvent.type(screen.getByLabelText('New password'), 'short');
@@ -150,7 +156,11 @@ describe('account', () => {
 
   it('signs out from the top bar', async () => {
     const signOut = vi.fn();
-    const { router, state } = renderAt('/dashboard', { status: 'authenticated', actor: ada, signOut });
+    const { router, state } = renderAt('/dashboard', {
+      status: 'authenticated',
+      actor: ada,
+      signOut,
+    });
     signOut.mockImplementation(async () => {
       Object.assign(state, { status: 'anonymous', actor: null });
     });

@@ -23,12 +23,14 @@ const superAdmin: Actor = {
 function renderAt(path: string, actor: Actor | null = superAdmin) {
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   return render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-    <AuthProvider initialActor={actor}>
-      <ToastProvider>
-        <RouterProvider router={router} />
-      </ToastProvider>
-    </AuthProvider>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      <AuthProvider initialActor={actor}>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </AuthProvider>
     </QueryClientProvider>,
   );
 }
@@ -73,8 +75,13 @@ describe('primitives', () => {
 describe('app shell', () => {
   it('renders a placeholder route inside the shell', async () => {
     renderAt('/clients');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Client List' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Skip to main content' })).toHaveAttribute('href', '#main');
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Client List' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Skip to main content' })).toHaveAttribute(
+      'href',
+      '#main',
+    );
     const nav = screen.getByRole('navigation', { name: 'Main' });
     expect(within(nav).getByRole('link', { name: 'CRM & Clients' })).toHaveAttribute(
       'aria-current',
@@ -89,7 +96,9 @@ describe('app shell', () => {
 
   it('redirects / to the dashboard', async () => {
     renderAt('/');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Good day, Ada' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Good day, Ada' }),
+    ).toBeInTheDocument();
   });
 
   it('shows not found for unknown paths', async () => {

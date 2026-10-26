@@ -84,7 +84,10 @@ export function Component() {
             ]}
           />
         </Panel>
-        <Panel title="Change password" description="Other sessions are signed out when you change it.">
+        <Panel
+          title="Change password"
+          description="Other sessions are signed out when you change it."
+        >
           <form className="flex flex-col gap-3" onSubmit={onSubmit} noValidate>
             {errors.root?.message ? <Alert tone="bad">{errors.root.message}</Alert> : null}
             <TextField

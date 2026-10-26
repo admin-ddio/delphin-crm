@@ -60,7 +60,12 @@ export function Component() {
             error={errors.email?.message}
             {...register('email')}
           />
-          <Button type="submit" variant="primary" className="justify-center" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            variant="primary"
+            className="justify-center"
+            disabled={isSubmitting}
+          >
             Send reset link
           </Button>
           <Link className="link self-start text-xs" to="/login">

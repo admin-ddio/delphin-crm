@@ -130,7 +130,12 @@ export function Component() {
             error={errors.confirm?.message}
             {...register('confirm')}
           />
-          <Button type="submit" variant="primary" className="justify-center" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            variant="primary"
+            className="justify-center"
+            disabled={isSubmitting}
+          >
             {isSubmitting ? 'Creating account…' : 'Create account'}
           </Button>
           <p className="text-xs text-muted">

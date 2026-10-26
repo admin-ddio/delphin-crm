@@ -55,8 +55,14 @@ export async function diffAgainstBaseline(
     await page.screenshot({ fullPage: !clip, clip, animations: 'disabled' }),
   );
 
-  await testInfo.attach(`actual-${file}`, { body: PNG.sync.write(actual), contentType: 'image/png' });
-  await testInfo.attach(`expected-${file}`, { body: PNG.sync.write(expected), contentType: 'image/png' });
+  await testInfo.attach(`actual-${file}`, {
+    body: PNG.sync.write(actual),
+    contentType: 'image/png',
+  });
+  await testInfo.attach(`expected-${file}`, {
+    body: PNG.sync.write(expected),
+    contentType: 'image/png',
+  });
 
   if (actual.width !== expected.width || actual.height !== expected.height) {
     testInfo.annotations.push({

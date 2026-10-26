@@ -17,7 +17,11 @@ export default tseslint.config(
   },
   {
     files: ['**/*.{ts,tsx}'],
-    extends: [js.configs.recommended, ...tseslint.configs.recommended, jsxA11y.flatConfigs.recommended],
+    extends: [
+      js.configs.recommended,
+      ...tseslint.configs.recommended,
+      jsxA11y.flatConfigs.recommended,
+    ],
     plugins: { 'react-hooks': reactHooks },
     languageOptions: {
       ecmaVersion: 2022,

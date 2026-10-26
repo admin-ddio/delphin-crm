@@ -8,12 +8,7 @@
  * through the Vite proxy on this same origin.
  */
 import { initializeApp, type FirebaseApp } from 'firebase/app';
-import {
-  connectAuthEmulator,
-  inMemoryPersistence,
-  initializeAuth,
-  type Auth,
-} from 'firebase/auth';
+import { connectAuthEmulator, inMemoryPersistence, initializeAuth, type Auth } from 'firebase/auth';
 
 let auth: Auth | null = null;
 

@@ -96,7 +96,9 @@ export function Component() {
                       <div className="code">CODE-{value}</div>
                     </td>
                     <td>
-                      <Badge tone={value === 100 ? 'ok' : 'accent'}>{value === 100 ? 'Done' : 'Open'}</Badge>
+                      <Badge tone={value === 100 ? 'ok' : 'accent'}>
+                        {value === 100 ? 'Done' : 'Open'}
+                      </Badge>
                     </td>
                     <td className="w-[200px]">
                       <Progress value={value} />
@@ -112,9 +114,15 @@ export function Component() {
 
       <Section title="Alert (callout)">
         <Alert title="Info">Informational message.</Alert>
-        <Alert tone="ok" title="Ok">Done.</Alert>
-        <Alert tone="warn" title="Warn">Check this.</Alert>
-        <Alert tone="bad" title="Bad">Something failed.</Alert>
+        <Alert tone="ok" title="Ok">
+          Done.
+        </Alert>
+        <Alert tone="warn" title="Warn">
+          Check this.
+        </Alert>
+        <Alert tone="bad" title="Bad">
+          Something failed.
+        </Alert>
       </Section>
 
       <Section title="Tabs, steps, key/value, timeline">
@@ -163,7 +171,11 @@ export function Component() {
 
       <Section title="Empty state">
         <Panel className="w-96" flush>
-          <EmptyState title="Nothing here" description="Description line." action={<Button size="sm">Action</Button>} />
+          <EmptyState
+            title="Nothing here"
+            description="Description line."
+            action={<Button size="sm">Action</Button>}
+          />
         </Panel>
       </Section>
 
@@ -171,7 +183,9 @@ export function Component() {
         <Button onClick={() => setDialogOpen(true)}>Open dialog</Button>
         <Button onClick={() => setDrawerOpen(true)}>Open drawer</Button>
         <Button onClick={() => toast({ title: 'Saved' })}>Toast</Button>
-        <Button onClick={() => toast({ title: 'Could not save', tone: 'error' })}>Error toast</Button>
+        <Button onClick={() => toast({ title: 'Could not save', tone: 'error' })}>
+          Error toast
+        </Button>
         <Dialog
           open={dialogOpen}
           onClose={() => setDialogOpen(false)}

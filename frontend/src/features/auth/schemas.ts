@@ -21,7 +21,11 @@ export type LoginForm = z.infer<typeof loginSchema>;
 
 export const signupSchema = z
   .object({
-    fullName: z.string().trim().min(1, 'Enter your full name.').max(200, 'Use at most 200 characters.'),
+    fullName: z
+      .string()
+      .trim()
+      .min(1, 'Enter your full name.')
+      .max(200, 'Use at most 200 characters.'),
     email,
     password: newPassword,
     confirm: z.string(),

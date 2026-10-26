@@ -90,7 +90,12 @@ describe('query client', () => {
       error: unknown,
     ) => boolean;
     const forbidden = new ApiError(403, { code: 'f', message: '', details: {}, request_id: null });
-    const unavailable = new ApiError(503, { code: 'u', message: '', details: {}, request_id: null });
+    const unavailable = new ApiError(503, {
+      code: 'u',
+      message: '',
+      details: {},
+      request_id: null,
+    });
     expect(retry(0, forbidden)).toBe(false);
     expect(retry(0, unavailable)).toBe(true);
     expect(retry(2, unavailable)).toBe(false);
