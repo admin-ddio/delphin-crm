@@ -19,7 +19,7 @@ from app.api.router import API_PREFIX, OPENAPI_TAGS, api_router
 from app.core.config import Settings, get_settings
 from app.core.errors import install_exception_handlers
 from app.core.idempotency import IDEMPOTENCY_HEADER
-from app.core.logging import configure_logging, instrument
+from app.core.logging import configure_logging, get_logger, instrument
 from app.core.middleware import BodySizeLimitMiddleware, CSRFMiddleware, SecurityHeadersMiddleware
 from app.core.request_id import REQUEST_ID_HEADER, RequestContextMiddleware
 from app.db.session import create_engine, create_sessionmaker
@@ -38,6 +38,12 @@ def operation_id(route: APIRoute) -> str:
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings)
+    if settings.is_production and not settings.cookies_secure:
+        get_logger(__name__).warning(
+            "insecure_session_cookies",
+            detail="SESSION_COOKIE_SECURE=false: session cookies travel over plain http. "
+            "Temporary only; serve over HTTPS and remove the setting.",
+        )
 
     engine = create_engine(settings)
 

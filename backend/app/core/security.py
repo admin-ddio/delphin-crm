@@ -68,7 +68,7 @@ def set_session_cookie(response: Response, token: str, settings: Settings) -> No
         token,
         max_age=settings.session_ttl_hours * 3600,
         httponly=True,
-        secure=settings.is_production,
+        secure=settings.cookies_secure,
         samesite="lax",
         path="/",
     )
@@ -78,7 +78,7 @@ def clear_session_cookie(response: Response, settings: Settings) -> None:
     response.delete_cookie(
         settings.session_cookie_name,
         httponly=True,
-        secure=settings.is_production,
+        secure=settings.cookies_secure,
         samesite="lax",
         path="/",
     )
@@ -91,7 +91,7 @@ def set_csrf_cookie(response: Response, settings: Settings) -> str:
         settings.csrf_cookie_name,
         token,
         httponly=False,
-        secure=settings.is_production,
+        secure=settings.cookies_secure,
         samesite="lax",
         path="/",
     )

@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     csrf_cookie_name: str = "delphin_csrf"
     csrf_header_name: str = "X-CSRF-Token"
     session_ttl_hours: int = Field(default=12, ge=1)
+    # Unset: Secure cookies in production. `false` lets a production stack be tried over
+    # plain http (e.g. by IP before a domain and TLS exist); cookies then travel unencrypted.
+    session_cookie_secure: bool | None = None
     max_request_body_bytes: int = Field(default=12 * 1024 * 1024, ge=1024)
     #: Private file storage root (local backend). Never served directly.
     storage_dir: str = "/data/uploads"
@@ -64,6 +67,11 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
+
+    @field_validator("session_cookie_secure", mode="before")
+    @classmethod
+    def _blank_is_unset(cls, value: object) -> object:
+        return None if isinstance(value, str) and not value.strip() else value
 
     @field_validator("log_level", mode="before")
     @classmethod
@@ -103,6 +111,12 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
+
+    @property
+    def cookies_secure(self) -> bool:
+        if self.session_cookie_secure is None:
+            return self.is_production
+        return self.session_cookie_secure
 
     @property
     def docs_enabled(self) -> bool:

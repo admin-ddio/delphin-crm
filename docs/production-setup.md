@@ -159,12 +159,32 @@ dc up -d --build --wait
 The images contain the code: a `git pull` alone changes nothing until you rebuild. After editing `.env`
 or the compose files, `up -d` recreates the affected containers. `restart` doesn't pick up changes.
 
+## Temporary: by IP address, without HTTPS
+
+In production the session cookie is `Secure`, so browsers accept it only over HTTPS. Over plain
+`http://` the pages load but every API call returns **401** after sign-in. Until a domain and TLS
+exist, you can try the stack by IP. In `.env`:
+
+```
+SESSION_COOKIE_SECURE=false
+APP_BASE_URL=http://203.0.113.10:8080
+ALLOWED_HOSTS=localhost,127.0.0.1,backend,203.0.113.10
+```
+
+Then run `dc up -d` and open `http://203.0.113.10:8080`. Use the server's real IP and your `EDGE_PORT`,
+and open that port in the firewall. The backend logs an `insecure_session_cookies` warning at every
+start while the setting is on.
+
+This is **unsafe**: passwords and session cookies cross the network unencrypted. Use test data only,
+and remove `SESSION_COOKIE_SECURE` as soon as HTTPS is in place.
+
 ## Finish the setup
 
 The stack runs. These tasks remain before real use:
 
 - [ ] **HTTPS.** Terminate TLS in front of `edge` (host nginx/Caddy, a load balancer or an ingress) and
-      forward `Host` and `X-Forwarded-Proto`. Then set `APP_BASE_URL=https://…` and rebuild.
+      forward `Host` and `X-Forwarded-Proto`. Then set `APP_BASE_URL=https://…`, remove
+      `SESSION_COOKIE_SECURE` if you set it, and rebuild.
 - [ ] **Firebase action URL.** **Authentication → Templates → Customize action URL** →
       `https://<your-domain>/auth/action`, so verification and reset links open inside the app. Set the
       sender name and e-mail templates there too.
@@ -202,6 +222,7 @@ The stack runs. These tasks remain before real use:
 | `PermissionError: '/run/secrets/firebase.json'` | Key not readable by uid 10001 | `chmod 444 secrets/firebase-service-account.json` |
 | `python: can't open file '/app/scripts/…'` | Image built before the script existed | `git pull` and `dc up -d --build` |
 | `service "migrate" didn't complete successfully` after changing `POSTGRES_PASSWORD` | Postgres keeps the password from when the volume was created | Keep data: `dc exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'`, then `\password <user>` with the new value. Or start empty: `dc down -v` (**deletes all data**), then `dc up -d --build --wait` and step 7 |
+| Pages load, but every API call returns 401 after sign-in | Site opened over `http://`. The `Secure` session cookie is dropped | HTTPS, or temporarily [by IP](#temporary-by-ip-address-without-https) |
 | Links in e-mails point to `localhost` | `APP_BASE_URL` not set | Set it, then `dc up -d` |
 
 Logs for any service: `dc logs <service> --tail=80` (`backend`, `migrate`, `edge`, `db`).

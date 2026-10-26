@@ -52,6 +52,15 @@ def test_session_cookie_flags() -> None:
     set_session_cookie(prod, "tok", make_settings(app_env="production"))
     assert "Secure" in prod.headers["set-cookie"]
 
+    # Temporary plain-http opt-out (by IP, before TLS); blank means unset.
+    insecure = Response()
+    set_session_cookie(
+        insecure, "tok", make_settings(app_env="production", session_cookie_secure="false")
+    )
+    assert "Secure" not in insecure.headers["set-cookie"]
+    assert make_settings(app_env="production", session_cookie_secure="").cookies_secure
+    assert make_settings(session_cookie_secure="true").cookies_secure
+
     cleared = Response()
     clear_session_cookie(cleared, make_settings())
     assert "Max-Age=0" in cleared.headers["set-cookie"]
