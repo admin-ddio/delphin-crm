@@ -41,7 +41,7 @@ from app.authz.permissions import (
     ORG_REPORTING_MANAGE,
     PROJECTS_VIEW_ALL,
 )
-from app.core.clock import Clock
+from app.core.clock import Clock, business_today
 from app.core.errors import (
     BusinessRuleViolation,
     Conflict,
@@ -595,7 +595,7 @@ class PeopleService:
     # ================================================================ helpers
 
     def _today(self) -> date:
-        return self._clock.now().date()
+        return business_today(self._clock)
 
     async def _org(self) -> Org:
         return await load_org(self._repo)

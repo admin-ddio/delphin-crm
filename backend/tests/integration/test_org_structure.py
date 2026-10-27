@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 from sqlalchemy import select
 
+from app.core.clock import SystemClock, business_today
 from app.modules.team.models import ReportingLine
 from app.platform.audit.models import AuditLog
 from tests.integration.test_onboarding import World, error, world
@@ -285,7 +286,7 @@ async def test_loops_duplicates_dates_preview_and_history(world: World) -> None:
     # Save with an effective date; ended lines stay in the history.
     saved = await world.http.put(
         f"/api/v1/team/employees/{dev['id']}/reporting",
-        json={**proposal, "effective_on": str((await get(world, dev["id"]))["created_at"])[:10]},
+        json={**proposal, "effective_on": business_today(SystemClock()).isoformat()},
     )
     assert saved.status_code == 200, saved.text
     body = saved.json()

@@ -239,7 +239,7 @@ export function ClientForm({
   const submit = handleSubmit(async (values) => {
     if (withServices) {
       const bad = Object.values(choice).some(
-        (fee) => fee.trim() && !/^d+(.d{1,2})?$/.test(fee.trim()),
+        (fee) => fee.trim() && !/^\d+(\.\d{1,2})?$/.test(fee.trim()),
       );
       if (!Object.keys(choice).length || bad) {
         setServicesError(

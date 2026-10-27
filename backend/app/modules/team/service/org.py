@@ -39,7 +39,7 @@ from app.authz.permissions import (
     SUPER_ADMIN,
     WILDCARD,
 )
-from app.core.clock import Clock
+from app.core.clock import Clock, business_today
 from app.core.errors import Conflict, Forbidden, NotFound, ValidationFailed
 from app.modules.team.models import Employee, EmploymentEvent, ReportingLine
 from app.modules.team.repository import OrgAuditRepository, PeopleRepository, RoleRepository
@@ -80,6 +80,13 @@ from app.platform.audit.service import AuditWriter
 from app.platform.identity.models import Role
 
 Key = tuple[str, uuid.UUID, uuid.UUID | None]
+
+
+def within_authority(actor: Actor, role: Role) -> bool:
+    """The role grants nothing the actor doesn't hold (Super Admin holds everything)."""
+    if actor.is_super_admin:
+        return True
+    return WILDCARD not in role.permissions and set(role.permissions) <= actor.permissions
 
 
 def _key(line: ReportingLine | ReportingLineIn) -> Key:
@@ -338,7 +345,7 @@ class OrgService:
                     roles=keys,
                     employee=org.person(employee.id) if employee else None,
                     editable=user.id != actor.user_id
-                    and all(self._within(actor, roles[k]) for k in keys if k in roles),
+                    and all(within_authority(actor, roles[k]) for k in keys if k in roles),
                 )
             )
         return result
@@ -354,13 +361,13 @@ class OrgService:
             raise NotFound("This user doesn't exist or isn't approved yet.")
         roles = {r.key: r for r in await self._roles.roles()}
         current = sorted(k for u, k in await self._roles.assignments() if u == user_id)
-        if not all(self._within(actor, roles[k]) for k in current if k in roles):
+        if not all(within_authority(actor, roles[k]) for k in current if k in roles):
             raise Forbidden("This user holds a role above your authority.")
         wanted = sorted(set(data.roles))
         unknown = [k for k in wanted if k not in roles]
         if unknown:
             raise ValidationFailed(f"Unknown role '{unknown[0]}'.", details={"roles": unknown})
-        above = [roles[k].name for k in wanted if not self._within(actor, roles[k])]
+        above = [roles[k].name for k in wanted if not within_authority(actor, roles[k])]
         if above:
             raise Forbidden(f"You can't assign {above[0]}: it has permissions you don't hold.")
         if wanted != current:
@@ -398,7 +405,7 @@ class OrgService:
     # ================================================================ helpers
 
     def _today(self) -> date:
-        return self._clock.now().date()
+        return business_today(self._clock)
 
     @staticmethod
     def _find(org: Org, employee_id: uuid.UUID) -> Employee:
@@ -579,19 +586,12 @@ class OrgService:
 
     # ------------------------------------------------------------ role authority
 
-    @staticmethod
-    def _within(actor: Actor, role: Role) -> bool:
-        """The role grants nothing the actor doesn't hold (Super Admin holds everything)."""
-        if actor.is_super_admin:
-            return True
-        return WILDCARD not in role.permissions and set(role.permissions) <= actor.permissions
-
     def _check_role_editable(self, actor: Actor, role: Role) -> None:
         if role.key == SUPER_ADMIN:
             raise Forbidden("The Super Admin role can't be changed.")
         if role.key in actor.roles and not actor.is_super_admin:
             raise Forbidden("You can't change a role you hold.")
-        if not self._within(actor, role):
+        if not within_authority(actor, role):
             raise Forbidden("This role has permissions you don't hold.")
 
     @staticmethod
@@ -623,5 +623,5 @@ class OrgService:
             is_system=role.is_system,
             member_count=members,
             editable=editable,
-            assignable=actor.can(ORG_ROLES_ASSIGN) and self._within(actor, role),
+            assignable=actor.can(ORG_ROLES_ASSIGN) and within_authority(actor, role),
         )

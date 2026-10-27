@@ -449,3 +449,46 @@ class OrgAuditEntry(BaseModel):
 
 
 ReportingPreview.model_rebuild()
+
+
+# ---------------------------------------------------------------- Team & Roles: accounts
+
+AccountStatus = Literal["active", "invited", "pending", "deactivated"]
+
+
+class Account(BaseModel):
+    id: uuid.UUID
+    full_name: str
+    email: str
+    #: active; invited (never signed in); pending (self sign-up awaiting approval); deactivated
+    status: AccountStatus
+    roles: list[str]
+    employee: PersonRef | None
+    last_login_at: datetime | None
+    open_tasks: int
+    overdue_tasks: int
+    is_me: bool
+    #: The viewer may change this account's roles or deactivate it.
+    editable: bool
+
+
+class AccountsOverview(BaseModel):
+    accounts: list[Account]
+    can_invite: bool
+    can_assign_roles: bool
+    can_approve: bool
+    can_deactivate: bool
+
+
+class InviteRequest(BaseModel):
+    email: EmailStr
+    full_name: Annotated[str, BeforeValidator(_strip)] = Field(min_length=1, max_length=200)
+    roles: list[str] = Field(min_length=1, max_length=10)
+    #: Link the new account to this employee record (optional).
+    employee_id: uuid.UUID | None = None
+
+
+class InviteResult(BaseModel):
+    account: Account
+    #: One-time password-setup link to send to the person (e-mail isn't configured yet).
+    setup_link: str

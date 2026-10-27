@@ -411,3 +411,62 @@ export function useOrgAudit(enabled: boolean) {
     enabled,
   });
 }
+
+// ---------------------------------------------------------------- Team & Roles: accounts
+
+export type Account = components['schemas']['Account'];
+export type AccountsOverview = components['schemas']['AccountsOverview'];
+export type InviteRequest = components['schemas']['InviteRequest'];
+
+export const accountsKey = ['team', 'accounts'] as const;
+
+export function useAccounts() {
+  return useQuery({
+    queryKey: accountsKey,
+    queryFn: async () => unwrap(await api.GET('/api/v1/team/accounts')),
+  });
+}
+
+function useRefreshAccounts() {
+  const queryClient = useQueryClient();
+  return () =>
+    void queryClient.invalidateQueries({
+      predicate: (q) =>
+        q.queryKey[0] === 'team' &&
+        [
+          'accounts',
+          'users',
+          'roles',
+          'org-audit',
+          'registrations',
+          'employees',
+          'employee',
+        ].includes(String(q.queryKey[1])),
+    });
+}
+
+export function useInvite() {
+  const refresh = useRefreshAccounts();
+  return useMutation({
+    mutationFn: async (body: InviteRequest) =>
+      unwrap(await api.POST('/api/v1/team/accounts/invite', { body })),
+    onSuccess: refresh,
+  });
+}
+
+export function useSetAccountActive() {
+  const refresh = useRefreshAccounts();
+  return useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) =>
+      unwrap(
+        active
+          ? await api.POST('/api/v1/team/accounts/{user_id}/reactivate', {
+              params: { path: { user_id: id } },
+            })
+          : await api.POST('/api/v1/team/accounts/{user_id}/deactivate', {
+              params: { path: { user_id: id } },
+            }),
+      ),
+    onSuccess: refresh,
+  });
+}

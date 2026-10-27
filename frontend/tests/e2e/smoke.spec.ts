@@ -259,7 +259,7 @@ async function fillClientForm(
   }: { name: string; website: string; industry?: string },
 ) {
   await page.getByLabel('Company Name *').fill(name);
-  await page.getByLabel('Website').fill(website);
+  await page.getByLabel('Website', { exact: true }).fill(website);
   await page.getByLabel('Industry *').selectOption({ label: industry });
   await page.getByLabel('Business Type').selectOption({ label: 'B2B' });
   await page.getByLabel('Contact Name *').fill('Pat Buyer');
@@ -312,7 +312,7 @@ test.describe('clients', () => {
 
     // Similar name: warning until confirmed.
     await page.getByLabel('Company Name *').fill(`${name} Ltd.`);
-    await page.getByLabel('Website').fill('');
+    await page.getByLabel('Website', { exact: true }).fill('');
     await page.getByLabel(/This is a different business/).uncheck();
     await page.getByRole('button', { name: 'Save & Continue' }).click();
     await expect(page.getByText('Possible duplicate')).toBeVisible();
@@ -514,7 +514,7 @@ test.describe('onboarding', () => {
     const startDialog = page.getByRole('dialog', { name: 'Start SEO' });
     await startDialog.getByLabel('Project Manager *').selectOption({ label: 'E2E Admin' });
     await startDialog.getByRole('button', { name: 'Start service' }).click();
-    await expect(page.getByText(/^SEO started. Project PRJ-d+ is ready.$/)).toBeVisible();
+    await expect(page.getByText(/^SEO started\. Project PRJ-\d+ is ready\.$/)).toBeVisible();
     await expect(clientServices.getByText('Active')).toBeVisible();
     await shot(page, 'services-client-panel');
     await clientServices.getByRole('link', { name: /^PRJ-/ }).click();
@@ -604,6 +604,91 @@ test.describe('onboarding', () => {
     // Onboarding is now 100%.
     await page.goto(clientPath);
     await expect(onboarding.getByText('100%')).toBeVisible();
+  });
+});
+
+test.describe('services, team & roles and activity', () => {
+  test.use({ storageState: AUTH_FILE });
+
+  test('services at creation, templates, invitations and the activity log', async ({ page }) => {
+    test.setTimeout(150_000);
+    const stamp = Date.now();
+    const name = `Services Co ${stamp}`;
+
+    // A client buys an SEO retainer and a website; both start as planned.
+    await page.goto('/clients/new');
+    await fillClientForm(page, { name, website: `services-${stamp}.example` });
+    await page.getByTestId('service-picker').getByLabel('SEO-friendly Website').check();
+    await shot(page, 'services-create-client');
+    await page.getByRole('button', { name: 'Save & Continue' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(name);
+    const clientServices = page.getByTestId('client-services');
+    await expect(clientServices.getByRole('link', { name: 'SEO', exact: true })).toBeVisible();
+    await expect(clientServices.getByRole('link', { name: 'SEO-friendly Website' })).toBeVisible();
+    await expect(clientServices.getByRole('button', { name: 'Start' }).first()).toBeDisabled();
+
+    // The onboarding checklist covers both services.
+    await page.getByRole('link', { name: 'Access', exact: true }).click();
+    const access = page.getByTestId('access-table');
+    await expect(access.getByText('Google Search Console')).toBeVisible();
+    await expect(access.getByText('Hosting / Server')).toBeVisible();
+
+    // Services & retainers: the retainer is listed with its fee; the website under Projects.
+    await page.goto('/services');
+    const retainers = page.getByTestId('retainer-table');
+    const row = retainers.getByRole('row').filter({ hasText: name });
+    await expect(row.getByText('Planned')).toBeVisible();
+    await expect(row.getByText('₹45,000')).toBeVisible();
+    await shot(page, 'services-list');
+    await page.getByRole('tab', { name: 'Projects' }).click();
+    await expect(
+      page.getByTestId('project-table').getByRole('row').filter({ hasText: name }),
+    ).toBeVisible();
+    await page.getByRole('tab', { name: 'Retainers' }).click();
+    await row.getByRole('link', { name: 'SEO', exact: true }).click();
+    await expect(page.getByText('This service starts once the client')).toBeVisible();
+    await shot(page, 'services-workspace-planned');
+
+    // Templates: monthly SEO tasks, editable.
+    await page.goto('/services/templates');
+    await expect(page.getByTestId('template-monthly')).toBeVisible();
+    await expect(page.getByLabel('Every month task 1')).toHaveValue('Keyword tracking update');
+    await shot(page, 'services-templates');
+
+    // Team & Roles: invite someone, get the setup link, then deactivate them.
+    await page.goto('/team');
+    await expect(page.getByTestId('accounts-table')).toBeVisible();
+    await page.getByRole('button', { name: 'Invite a person' }).click();
+    const invite = page.getByRole('dialog', { name: 'Invite a person' });
+    await invite.getByLabel('Full name *').fill(`Invitee ${stamp}`);
+    await invite.getByLabel('Work e-mail *').fill(`invitee-${stamp}@delphin.example`);
+    await invite.getByRole('button', { name: 'Invite' }).click();
+    const ready = page.getByRole('dialog', { name: 'Invitation ready' });
+    await expect(ready.getByLabel('Setup link')).toHaveValue(/oobCode|mode=resetPassword|http/);
+    await ready.getByRole('button', { name: 'Done' }).click();
+    const invitee = page
+      .getByTestId('accounts-table')
+      .getByRole('row')
+      .filter({
+        hasText: `invitee-${stamp}@delphin.example`,
+      });
+    await expect(invitee.getByText('Invited')).toBeVisible();
+    page.once('dialog', (d) => void d.accept());
+    await invitee.getByRole('button', { name: 'Deactivate' }).click();
+    await expect(invitee.getByText('Deactivated')).toBeVisible();
+    await shot(page, 'team-accounts');
+
+    // Activity log: the services chosen for the new client, filtered to Services.
+    await page.goto('/activity');
+    await page.getByLabel('Area').selectOption({ label: 'Services' });
+    const log = page.getByTestId('activity-log');
+    await expect(
+      log
+        .getByRole('listitem')
+        .filter({ hasText: name })
+        .getByText('Services chosen: SEO, SEO-friendly Website'),
+    ).toBeVisible();
+    await shot(page, 'activity-log');
   });
 });
 

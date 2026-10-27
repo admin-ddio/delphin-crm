@@ -1,6 +1,8 @@
 /**
- * /team: Team & roles. Ported so far: approving self sign-ups (users.approve).
- * The people list and capability matrix from the clickable demo are not ported yet.
+ * /team: Team & roles, the people-and-access hub: pending self sign-ups
+ * (users.approve) and every sign-in account with roles, status and workload
+ * (invite, change roles, deactivate). The permission matrix lives in Organization
+ * & Roles (/team/teams?tab=roles) and is linked, not duplicated.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -12,6 +14,7 @@ import { Panel } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { AccountsPanel } from '@/features/team/AccountsPanel';
 import { useToast } from '@/components/ui/Toast';
 import { api, ApiError, unwrap } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
@@ -172,15 +175,13 @@ export function Component() {
   const canApprove = can(actor?.permissions ?? [], P.usersApprove);
   return (
     <>
-      <PageHeader title="Team & roles" />
+      <PageHeader
+        title="Team & roles"
+        description="Who can sign in, with which roles, and how much open work each person has."
+      />
       <div className="flex flex-col gap-4">
         {canApprove ? <PendingSignUps /> : null}
-        <Panel flush>
-          <EmptyState
-            title="Not yet ported. See PARITY.md"
-            description={<span className="code">frontend/src/features/team/PARITY.md</span>}
-          />
-        </Panel>
+        <AccountsPanel />
       </div>
     </>
   );

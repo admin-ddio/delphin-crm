@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from sqlalchemy import update
 
-from app.core.clock import FixedClock
+from app.core.clock import FixedClock, SystemClock, business_today
 from app.modules.clients.models import ClientTeamMember
 from app.modules.services.models import ServiceEngagement
 from app.modules.services.service import ServicesService
@@ -46,7 +46,7 @@ async def on_team(w: World, client_id: str, user: User, area: str) -> None:
 
 
 def months_ago(n: int) -> date:
-    first = datetime.now(UTC).date().replace(day=1)
+    first = business_today(SystemClock()).replace(day=1)
     for _ in range(n):
         first = (first - timedelta(days=1)).replace(day=1)
     return first
@@ -212,7 +212,7 @@ async def test_retainer_months_are_generated_once(world: World) -> None:
     seo = await service(world, cid, "seo")
 
     # The month it starts gets the setup tasks only.
-    fresh = await start(world, seo["id"], pm, datetime.now(UTC).date())
+    fresh = await start(world, seo["id"], pm, business_today(SystemClock()))
     assert fresh.status_code == 200, fresh.text
     assert len(fresh.json()["tasks"]) == 0  # this month's monthly tasks: none yet
     none_yet = await world.http.post(f"/api/v1/services/{seo['id']}/generate")

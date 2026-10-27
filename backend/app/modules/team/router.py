@@ -12,9 +12,12 @@ from app.authz.actor import Actor
 from app.authz.dependencies import CurrentActor, require_permission
 from app.authz.permissions import USERS_APPROVE
 from app.core.clock import Clock, get_clock
+from app.core.config import Settings, get_app_settings
 from app.core.errors import AUTH_ERROR_RESPONSES, ErrorEnvelope
 from app.db.session import get_session
 from app.modules.team.schemas import (
+    Account,
+    AccountsOverview,
     ApproveRegistrationRequest,
     DepartmentIn,
     DepartmentOut,
@@ -28,6 +31,8 @@ from app.modules.team.schemas import (
     EmployeeStatus,
     EmployeeUpdate,
     EmploymentEventOut,
+    InviteRequest,
+    InviteResult,
     OrgAuditEntry,
     OrgChart,
     PendingRegistration,
@@ -44,7 +49,7 @@ from app.modules.team.schemas import (
     UserRoles,
     UserRolesUpdate,
 )
-from app.modules.team.service import OrgService, PeopleService, TeamService
+from app.modules.team.service import AccountsService, OrgService, PeopleService, TeamService
 from app.platform.identity.firebase import IdentityProvider, get_identity_provider
 
 TAG = {"name": "team", "description": "Team & Employees, teams, workload, sign-up approvals"}
@@ -346,3 +351,48 @@ async def org_audit(
 ) -> list[OrgAuditEntry]:
     """`org.audit.view`. Departments, designations, reporting, roles; newest first."""
     return await service.audit(actor, limit=limit, action=action)
+
+
+# ==================================================================== Team & Roles: accounts
+
+
+def get_accounts_service(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    clock: Annotated[Clock, Depends(get_clock)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+    identity: Annotated[IdentityProvider, Depends(get_identity_provider)],
+) -> AccountsService:
+    return AccountsService(session, clock=clock, settings=settings, identity=identity)
+
+
+Accounts = Annotated[AccountsService, Depends(get_accounts_service)]
+
+
+@router.get("/accounts", response_model=AccountsOverview, responses=ERRORS)
+async def list_accounts(actor: CurrentActor, service: Accounts) -> AccountsOverview:
+    """Sign-in accounts with roles, status and workload (Team & Roles)."""
+    return await service.overview(actor)
+
+
+@router.post(
+    "/accounts/invite",
+    status_code=status.HTTP_201_CREATED,
+    response_model=InviteResult,
+    responses=ERRORS,
+)
+async def invite_account(
+    body: InviteRequest, actor: CurrentActor, service: Accounts
+) -> InviteResult:
+    """`users.manage`. Creates the account and returns a one-time password-setup link."""
+    return await service.invite(actor, body)
+
+
+@router.post("/accounts/{user_id}/deactivate", response_model=Account, responses=ERRORS)
+async def deactivate_account(user_id: uuid.UUID, actor: CurrentActor, service: Accounts) -> Account:
+    """`users.manage`. Signs the person out everywhere; never yourself or above you."""
+    return await service.set_active(actor, user_id, active=False)
+
+
+@router.post("/accounts/{user_id}/reactivate", response_model=Account, responses=ERRORS)
+async def reactivate_account(user_id: uuid.UUID, actor: CurrentActor, service: Accounts) -> Account:
+    return await service.set_active(actor, user_id, active=True)

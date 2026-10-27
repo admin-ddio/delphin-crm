@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 
+from app.core.clock import FixedClock, business_today
 from app.modules.services.catalogue import access_items_for
 from app.modules.services.scheduling import monthly_due, off_weekend, period_key, phase_due
 
@@ -27,3 +28,13 @@ def test_access_items_are_the_union_of_the_services() -> None:
     both = [key for key, _, _ in access_items_for(["seo", "website"])]
     assert both == ["GSC", "GA4", "CMS", "AHREFS", "DOMAIN_DNS", "HOSTING", "GDRIVE"]
     assert [key for key, _, _ in access_items_for([])] == ["GDRIVE"]
+
+
+def test_business_today_is_india_time() -> None:
+    # 20:00 UTC on 27 Oct is already 01:30 on 28 Oct in India.
+    assert business_today(FixedClock(datetime(2026, 10, 27, 20, 0, tzinfo=UTC))) == date(
+        2026, 10, 28
+    )
+    assert business_today(FixedClock(datetime(2026, 10, 27, 10, 0, tzinfo=UTC))) == date(
+        2026, 10, 27
+    )

@@ -1,8 +1,7 @@
 # Activity: parity checklist
 
-> **Status: not started.** Known only from the clickable demo; the scaffold brief lists no
-> `/activity` route. Confirm the pilot has it before porting. See
-> [docs/clickable-demo-findings.md](../../../../docs/clickable-demo-findings.md).
+> **Status: built (2026-10-28) from the clickable demo.** Confirm the pilot has `/activity`
+> before treating it as final. See [docs/clickable-demo-findings.md](../../../../docs/clickable-demo-findings.md).
 
 | | |
 |---|---|
@@ -13,16 +12,18 @@
 
 ## Actions → REST endpoints
 
-| Pilot Server Action | Method | Path | Permission | Status |
+| Action | Method | Path | Permission | Status |
 |---|---|---|---|---|
-| (list) | GET | `/api/v1/activity` | TODO | not-started |
+| list (filters, cursor) | GET | `/api/v1/activity?client_id&person_id&area&since&until&before&limit` | signed in, scoped | built |
 
-## Business rules (from the demo, to confirm)
+## Business rules (from the demo)
 
-- [ ] Newest first; each entry shows the text, the actor and the time
-- [ ] Also shown per client (client Activity tab), scoped to records the actor can see
-- [ ] Every mutation in the app writes one entry (platform.activity.ActivityRecorder)
+- [x] Newest first; each entry shows the text, the actor ("System" when none) and the time
+- [x] Scoped to clients the viewer can see (ClientScope); also shown per client (client Activity tab)
+- [x] Areas from the event verb: clients, onboarding, projects & tasks, approvals, documents, meetings, services, other
+- [x] Keyset pagination (`before` = "occurred_at|id")
+- [x] Organisation / HR changes stay in their own audit logs (Organization & Roles → Audit log)
 
-## Entities to port
+## Entities
 
-- None: uses `activity_events` from migration 0001.
+- None: reads `activity_events` from migration 0001 (written by `platform.activity.ActivityRecorder`).

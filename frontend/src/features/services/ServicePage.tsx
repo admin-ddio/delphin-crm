@@ -90,7 +90,9 @@ function Actions({ service }: { service: ServiceDetail }) {
               toast({
                 title: result.created
                   ? `${result.created} tasks created for ${monthLabel(result.period)}.`
-                  : `${monthLabel(result.period)} is already generated.`,
+                  : result.skipped
+                    ? `${monthLabel(result.period)} is already generated.`
+                    : 'Monthly tasks start the month after the retainer starts.',
               });
             } catch (error) {
               toast({

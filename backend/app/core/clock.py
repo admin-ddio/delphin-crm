@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from typing import Protocol
+from datetime import UTC, date, datetime, timedelta, timezone
+from typing import Final, Protocol
+
+#: Delphin works in India Standard Time (UTC+05:30, no daylight saving). Calendar
+#: dates people pick (effective dates, service starts, monthly periods) use it.
+BUSINESS_TZ: Final = timezone(timedelta(hours=5, minutes=30), "IST")
 
 
 class Clock(Protocol):
@@ -34,6 +38,11 @@ class FixedClock:
 
     def advance(self, delta: timedelta) -> None:
         self.current = self.current + delta
+
+
+def business_today(clock: Clock) -> date:
+    """Today's date in the business time zone (not the UTC date)."""
+    return clock.now().astimezone(BUSINESS_TZ).date()
 
 
 def get_clock() -> Clock:

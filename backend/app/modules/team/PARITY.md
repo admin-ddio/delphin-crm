@@ -35,6 +35,9 @@
 | users' roles: list / set | GET/PUT | `/api/v1/team/users…` | `org.roles.assign` | built |
 | organisation audit log | GET | `/api/v1/team/org-audit` | `org.audit.view` | built |
 | unlinked accounts | GET | `/api/v1/team/employees/user-options` | `hr.manage` | built |
+| Team & Roles: accounts (roles, status, workload) | GET | `/api/v1/team/accounts` | `users.manage`, `org.roles.assign`, `users.approve` or `org.team.view` | built |
+| invite a person (setup link) | POST | `/api/v1/team/accounts/invite` | `users.manage` (roles within authority) | built |
+| deactivate / reactivate | POST | `/api/v1/team/accounts/{id}/deactivate`, `…/reactivate` | `users.manage` (not yourself, not above you) | built |
 | teams, workload | | `/team/teams/:id`, `/team/workload` | | not-started |
 
 ## Business rules (HR and Organization Structure briefs)
@@ -56,6 +59,8 @@
 - [x] Exits are refused as a status edit (offboarding arrives in phase 5)
 - [x] Every change audited (`department.*`, `designation.*`, `reporting.changed`, `role.*`, `user.roles_changed`, `employee.placement_changed`); employment changes also in the employee's history; personal-detail changes record field names only
 - [ ] Future-dated reporting changes (scheduled) — not supported yet; the effective date is today or earlier
+
+- [x] Team & Roles hub (2026-10-28): invitations return a one-time setup link (e-mail not configured); deactivation revokes all sessions; the permission matrix stays in Organization & Roles
 
 ## Record-level visibility
 

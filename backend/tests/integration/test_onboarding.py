@@ -23,11 +23,13 @@ from app.main import create_app
 from app.modules.clients.models import Client
 from app.modules.onboarding.service import OnboardingService
 from app.platform.audit.models import AuditLog
+from app.platform.identity.firebase import get_identity_provider
 from app.platform.identity.models import Role, User, UserRole
 from app.platform.identity.sessions import actor_for_user
 from app.platform.notifications.models import Notification
 from app.platform.storage.local import LocalStorage, get_storage
 from tests.conftest import make_settings
+from tests.integration.test_auth import FakeIdentity
 
 pytestmark = pytest.mark.integration
 
@@ -130,6 +132,8 @@ async def world(
     app.dependency_overrides[get_session] = session_override
     app.dependency_overrides[get_actor] = lambda: current[0]
     app.dependency_overrides[get_storage] = lambda: LocalStorage(tmp_path)
+    identity = FakeIdentity()
+    app.dependency_overrides[get_identity_provider] = lambda: identity
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as http:
         yield World(http=http, session=db_session, roles=roles, current=current)

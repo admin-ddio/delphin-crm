@@ -1,5 +1,7 @@
 import { groupByLayout } from '@/app/placeholder-route';
 import { activityRouteSpecs } from '@/features/activity/route-specs';
 
-/** Lazy placeholder routes; each feature port swaps a page in without touching the router. */
-export const routes = groupByLayout(activityRouteSpecs);
+/** /activity: the activity log. */
+export const routes = groupByLayout(activityRouteSpecs, {
+  '/activity': () => import('@/features/activity/ActivityPage'),
+});

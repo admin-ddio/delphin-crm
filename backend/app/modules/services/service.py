@@ -39,7 +39,7 @@ from app.authz.permissions import (
     SERVICES_MANAGE,
     SERVICES_TEMPLATES_MANAGE,
 )
-from app.core.clock import Clock
+from app.core.clock import Clock, business_today
 from app.core.errors import BusinessRuleViolation, Conflict, Forbidden, NotFound, ValidationFailed
 from app.modules.clients.models import Client
 from app.modules.notifications.service import NotificationService
@@ -563,7 +563,7 @@ class ServicesService:
     # ================================================================ helpers
 
     def _today(self) -> date:
-        return self._clock.now().date()
+        return business_today(self._clock)
 
     async def _type(self, key: str) -> ServiceType:
         service_type = await self._repo.type_by_key(key)
