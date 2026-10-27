@@ -45,7 +45,7 @@ STEP_DEFS: Final[tuple[tuple[str, str, str], ...]] = (
     ),
     ("review", "Onboarding review", "Pass the review once steps 1–10 are done."),
     ("done", "Onboarding completed", "Complete onboarding."),
-    ("project", "Project created / linked", "Create the delivery project."),
+    ("project", "Delivery started", "Start a service (or create the delivery project)."),
 )
 STEP_KEYS: Final = tuple(key for key, _, _ in STEP_DEFS)
 #: Steps 1–10 must be done before the review can pass.
@@ -91,7 +91,7 @@ ACTIONS: Final[dict[str, str]] = {
     "kickoff_internal": "Internal team kickoff",
     "review": "Pass the onboarding review",
     "done": "Complete onboarding",
-    "project": "Create the delivery project",
+    "project": "Start delivery (a service or project)",
 }
 
 DEFAULT_ACCESS_ITEMS: Final = (
@@ -319,7 +319,7 @@ def evaluate(snap: Snapshot) -> Evaluation:  # noqa: PLR0912, PLR0915  # one bra
     if snap.has_project:
         out["project"] = ("done", "")
     elif snap.completed:
-        out["project"] = ("progress", "Create the delivery project")
+        out["project"] = ("progress", "Start a service from the client profile")
     else:
         out["project"] = ("todo", "Available after onboarding is completed")
 

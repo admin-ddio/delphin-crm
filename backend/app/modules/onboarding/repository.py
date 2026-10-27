@@ -30,6 +30,8 @@ from app.modules.onboarding.models import (
 )
 from app.modules.onboarding.steps import DEFAULT_ACCESS_ITEMS
 from app.modules.projects.models import Project
+from app.modules.services.catalogue import AccessItem, access_items_for
+from app.modules.services.models import ServiceEngagement, ServiceType
 from app.platform.identity.models import Role, User, UserRole
 
 #: Who can be assigned to a client's internal team (demo).
@@ -72,7 +74,10 @@ class OnboardingRepository:
             return row
         row = ClientOnboarding(client_id=client_id)
         self._session.add(row)
-        for position, (key, label, description) in enumerate(DEFAULT_ACCESS_ITEMS):
+        # Tailored to the services chosen at creation; the SEO default otherwise.
+        keys = await self.service_keys(client_id)
+        items = access_items_for(keys) if keys else DEFAULT_ACCESS_ITEMS
+        for position, (key, label, description) in enumerate(items):
             self._session.add(
                 OnboardingAccessItem(
                     client_id=client_id,
@@ -84,6 +89,43 @@ class OnboardingRepository:
             )
         await self._session.flush()
         return row
+
+    async def service_keys(self, client_id: uuid.UUID) -> list[str]:
+        stmt = (
+            select(ServiceType.key)
+            .join(ServiceEngagement, ServiceEngagement.service_type_id == ServiceType.id)
+            .where(
+                ServiceEngagement.client_id == client_id, ServiceEngagement.status != "cancelled"
+            )
+            .order_by(ServiceType.sort)
+        )
+        return list(dict.fromkeys((await self._session.execute(stmt)).scalars()))
+
+    async def add_access_items(self, client_id: uuid.UUID, items: Sequence[AccessItem]) -> int:
+        """Append checklist items a newly added service needs (open onboarding only)."""
+        stmt = select(ClientOnboarding).where(ClientOnboarding.client_id == client_id)
+        row = (await self._session.execute(stmt)).scalar_one_or_none()
+        if row is None or row.completed_at is not None:
+            return 0  # not started: seeded from the services later; completed: left alone
+        existing = await self.access_items(client_id)
+        keys = {i.key for i in existing}
+        position = max((i.position for i in existing), default=-1) + 1
+        added = 0
+        for key, label, description in items:
+            if key in keys:
+                continue
+            self._session.add(
+                OnboardingAccessItem(
+                    client_id=client_id,
+                    key=key,
+                    label=label,
+                    description=description,
+                    position=position + added,
+                )
+            )
+            added += 1
+        await self._session.flush()
+        return added
 
     async def states(self, client_ids: Sequence[uuid.UUID]) -> dict[uuid.UUID, ClientOnboarding]:
         rows = await self._session.execute(

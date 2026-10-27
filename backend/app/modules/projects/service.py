@@ -18,6 +18,7 @@ TODO(pilot-port): confirm against services/projects.ts.
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from datetime import date, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,6 +50,17 @@ from app.platform.system.counters import format_code, next_value
 ONBOARDING_REQUIRED = "Projects can only be created after client onboarding is completed."
 NOT_FOUND = "This project doesn't exist or you don't have access to it."
 EMPTY_STATS = (0, 0, 0, 0, 0)
+
+
+@dataclass(frozen=True, slots=True)
+class PlannedTask:
+    """A task another module (services) asks a project to hold."""
+
+    title: str
+    due_date: date
+    requires_review: bool
+    requires_client_approval: bool
+    assignee_id: uuid.UUID | None = None
 
 
 def _ref(user: User) -> UserRef:
@@ -190,6 +202,100 @@ class ProjectService:
                 summary="Onboarding step 13 done: first project created",
             )
         return await self.get(actor, project.id)
+
+    async def create_for_service(  # one argument per project field
+        self,
+        actor: Actor,
+        *,
+        client: Client,
+        name: str,
+        manager_id: uuid.UUID,
+        start_date: date,
+        tasks: list[PlannedTask],
+        source: str,
+    ) -> Project:
+        """The delivery project of a client service (services module). The caller has
+        checked `services.manage`; onboarding and the manager rules still apply here."""
+        if not await self._repo.onboarding_completed(client.id):
+            raise BusinessRuleViolation(ONBOARDING_REQUIRED)
+        manager = await self._repo.eligible_manager(manager_id)
+        if manager is None:
+            raise ValidationFailed(
+                "Choose an active Project Manager.", details={"manager_id": str(manager_id)}
+            )
+        first_project = not await self._repo.clients_with_projects([client.id])
+        project = Project(
+            code=format_code("PRJ", await next_value(self._session, "project")),
+            name=name,
+            client_id=client.id,
+            manager_id=manager.id,
+            start_date=start_date,
+            template=None,
+            created_by_id=actor.user_id,
+        )
+        await self._repo.add(project)
+        await self.add_planned_tasks(project, tasks, created_by=actor.user_id)
+        await self._audit.record(
+            action="project.created",
+            entity_type="project",
+            entity_id=project.id,
+            actor_user_id=actor.user_id,
+            changes={
+                "name": project.name,
+                "client_id": str(client.id),
+                "manager_id": str(manager.id),
+                "start_date": project.start_date.isoformat(),
+            },
+            context={"code": project.code, "tasks_created": len(tasks), "source": source},
+        )
+        await self._activity.record(
+            verb="project_created",
+            subject_type="client",
+            subject_id=client.id,
+            actor_user_id=actor.user_id,
+            summary=f"Project {project.code} created for {source}: {project.name}"
+            + (f" ({len(tasks)} tasks from template)" if tasks else ""),
+        )
+        if first_project:
+            await self._activity.record(
+                verb="first_project_created",
+                subject_type="client",
+                subject_id=client.id,
+                actor_user_id=actor.user_id,
+                summary="Onboarding step 13 done: delivery started",
+            )
+        return project
+
+    async def add_planned_tasks(
+        self, project: Project, tasks: list[PlannedTask], *, created_by: uuid.UUID | None
+    ) -> list[Task]:
+        """Add tasks to a project, reviewed by its manager (services: monthly work)."""
+        created = []
+        for spec in tasks:
+            task = Task(
+                number=await next_value(self._session, "task"),
+                project_id=project.id,
+                client_id=project.client_id,
+                title=spec.title,
+                status="backlog",
+                assignee_id=spec.assignee_id,
+                reviewer_id=project.manager_id,
+                requires_review=spec.requires_review,
+                requires_client_approval=spec.requires_client_approval,
+                due_date=spec.due_date,
+                created_by_id=created_by,
+            )
+            self._tasks.add(task)
+            created.append(task)
+        await self._tasks.flush()
+        return created
+
+    async def project(self, project_id: uuid.UUID) -> Project | None:
+        """Unscoped lookup for other modules that already checked access."""
+        return await self._session.get(Project, project_id)
+
+    async def manager_users(self) -> list[User]:
+        return await self._repo.manager_options()
 
     # ------------------------------------------------------------ helpers
 

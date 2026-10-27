@@ -270,6 +270,10 @@ async function fillClientForm(
   await page.getByLabel('Contract Start Date *').fill('2026-05-01');
   await page.getByLabel('Contract End Date *').fill('2027-04-30');
   await page.getByLabel('Contract Value (INR)').fill('500000');
+  // Services bought: an SEO retainer.
+  const services = page.getByTestId('service-picker');
+  await services.getByLabel('SEO', { exact: true }).check();
+  await services.getByLabel('Monthly fee (INR)').fill('45000');
 }
 
 test.describe('clients', () => {
@@ -503,15 +507,18 @@ test.describe('onboarding', () => {
     const row = page.getByTestId('onboarding-board').getByRole('row').filter({ hasText: name });
     await expect(row.getByText('Completed')).toBeVisible();
 
-    // 13. The first project, from the template, from the client overview.
+    // 13. Delivery starts: the SEO retainer creates its project with the setup tasks.
     await page.goto(clientPath);
-    await page.getByRole('link', { name: 'Create the delivery project →' }).click();
-    await expect(page.getByLabel('Project name')).toHaveValue(`${name} SEO Retainer`);
-    await page.getByLabel('Project manager').selectOption({ label: 'E2E Admin' });
-    await page.getByRole('button', { name: 'Create project' }).click();
-    await expect(
-      page.getByRole('heading', { level: 1, name: `${name} SEO Retainer` }),
-    ).toBeVisible();
+    const clientServices = page.getByTestId('client-services');
+    await clientServices.getByRole('button', { name: 'Start' }).click();
+    const startDialog = page.getByRole('dialog', { name: 'Start SEO' });
+    await startDialog.getByLabel('Project Manager *').selectOption({ label: 'E2E Admin' });
+    await startDialog.getByRole('button', { name: 'Start service' }).click();
+    await expect(page.getByText(/^SEO started. Project PRJ-d+ is ready.$/)).toBeVisible();
+    await expect(clientServices.getByText('Active')).toBeVisible();
+    await shot(page, 'services-client-panel');
+    await clientServices.getByRole('link', { name: /^PRJ-/ }).click();
+    await expect(page.getByRole('heading', { level: 1, name: `${name}: SEO` })).toBeVisible();
     const board = page.getByTestId('task-board');
     const backlog = board.getByRole('region', { name: 'Backlog' });
     await expect(backlog.getByRole('button')).toHaveCount(5);
@@ -592,9 +599,7 @@ test.describe('onboarding', () => {
       page.getByTestId('task-table').getByText('Baseline SEO audit').first(),
     ).toBeVisible();
     await page.goto('/projects');
-    await expect(
-      page.getByTestId('projects-table').getByText(`${name} SEO Retainer`),
-    ).toBeVisible();
+    await expect(page.getByTestId('projects-table').getByText(`${name}: SEO`)).toBeVisible();
 
     // Onboarding is now 100%.
     await page.goto(clientPath);
@@ -687,7 +692,9 @@ test.describe('people and organization settings', () => {
     await pickOption(page.getByLabel('Employee', { exact: true }), member);
     await expect(page.getByText('What applies now')).toBeVisible();
     await page.getByRole('button', { name: 'Add relationship' }).click();
-    await page.getByLabel('Relationship 2', { exact: true }).selectOption({ label: 'Performance reviewer' });
+    await page
+      .getByLabel('Relationship 2', { exact: true })
+      .selectOption({ label: 'Performance reviewer' });
     await pickOption(page.getByLabel('Reports to').nth(1), lead);
     await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled();
     await page.getByRole('button', { name: 'Preview changes' }).click();

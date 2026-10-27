@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import re
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
@@ -181,6 +182,13 @@ class Context:
             completed=self.state.completed_at is not None,
             has_project=self.has_project,
         )
+
+
+async def add_access_items(
+    session: AsyncSession, client_id: uuid.UUID, items: Sequence[tuple[str, str, str]]
+) -> int:
+    """Extend an open onboarding's access checklist (services added after creation)."""
+    return await OnboardingRepository(session).add_access_items(client_id, items)
 
 
 def _ref(user: User | None) -> UserRef | None:

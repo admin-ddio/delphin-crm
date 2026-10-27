@@ -32,6 +32,7 @@ REQUIRED: dict[str, object] = {
     "contact_phone": "+91 98765 43210",
     "contract_start": "2026-05-01",
     "contract_end": "2027-04-30",
+    "services": [{"service_key": "seo"}],
 }
 
 
@@ -120,8 +121,11 @@ async def test_create_assigns_codes_normalises_and_audits(world: World) -> None:
     assert audit[0].changes["name"] == "Acme Ltd"
 
     activity = await world.http.get(f"/api/v1/clients/{body['id']}/activity")
-    assert [a["summary"] for a in activity.json()] == ["Client Acme Ltd created"]
-    assert activity.json()[0]["actor"]["full_name"] == "Anika Shah"
+    assert sorted(a["summary"] for a in activity.json()) == [
+        "Client Acme Ltd created",
+        "Services chosen: SEO",
+    ]
+    assert {a["actor"]["full_name"] for a in activity.json()} == {"Anika Shah"}
 
 
 async def test_duplicate_domain_is_a_hard_block(world: World) -> None:
@@ -309,6 +313,7 @@ async def test_create_form_contract_and_lifecycle(world: World) -> None:
         "contact_phone",
         "contract_start",
         "contract_end",
+        "services",
     }
     cid = client["id"]
     cleared = await world.http.patch(f"/api/v1/clients/{cid}", json={"contact_phone": None})

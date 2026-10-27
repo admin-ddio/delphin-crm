@@ -9,6 +9,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, BeforeValidator, EmailStr, Field, model_validator
 
+from app.modules.services.schemas import ServiceSelection
+
 ClientStatus = Literal["onboarding", "active", "on_hold", "completed"]
 BusinessType = Literal["b2b", "b2c", "b2b_b2c", "d2c", "non_profit", "government"]
 CompanySize = Literal["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"]
@@ -68,6 +70,8 @@ class ClientCreate(_ContractDates):
     contract_notes: OptionalText = Field(default=None, max_length=250)
     # Account Manager
     account_manager_id: uuid.UUID
+    # Services bought (retainers: SEO, Social Media; projects: Website, Web App, Mobile App)
+    services: list[ServiceSelection] = Field(min_length=1, max_length=10)
     confirm_different_business: bool = Field(
         default=False,
         description="Override the similar-name warning (never overrides a duplicate domain).",

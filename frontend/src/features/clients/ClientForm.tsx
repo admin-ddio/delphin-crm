@@ -1,11 +1,12 @@
 /**
  * Screen 2 – Create / edit client (product mockup): Company Information, Primary
- * Contact, Account Manager, Contract Details and an optional contract upload.
+ * Contact, Account Manager, Contract Details and an optional contract upload; on create
+ * also the Services bought (retainers and projects, at least one).
  * Duplicate rules are enforced by the API (duplicate domain → hard error; similar
  * name → error until "This is a different business" is ticked).
  */
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Building2, FileText, Upload, UserRound, UserRoundCog } from 'lucide-react';
+import { Briefcase, Building2, FileText, Upload, UserRound, UserRoundCog } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -24,9 +25,13 @@ import {
   type ClientCreate,
   type ClientDetail,
 } from '@/features/clients/api';
+import type { ServiceSelection } from '@/features/services/api';
+import { ServicePicker, toSelections, type ServiceChoice } from '@/features/services/ServicePicker';
 import { ApiError } from '@/lib/api-client';
+import { useAuth } from '@/lib/auth-context';
 import { COUNTRY_OPTIONS, DIAL_CODES } from '@/lib/countries';
 import { formatBytes } from '@/lib/format';
+import { can, P } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 
 const text = (max: number) => z.string().trim().max(max, `Use at most ${max} characters.`);
@@ -128,7 +133,7 @@ export function fromClient(client: ClientDetail): ClientFormValues {
 }
 
 /** Form values → API body (blank strings become null). */
-export function toClientBody(v: ClientFormValues): ClientCreate {
+export function toClientBody(v: ClientFormValues): Omit<ClientCreate, 'services'> {
   const blank = (s: string) => (s.trim() === '' ? null : s.trim());
   const phone = (dial: string, number: string) =>
     number.trim() ? `${dial} ${number.trim()}` : null;
@@ -187,7 +192,13 @@ export interface ClientFormProps {
   defaultValues: ClientFormValues;
   /** Create only: let the user attach the signed contract (uploaded after save). */
   withUpload?: boolean;
-  onSubmit(values: ClientFormValues, contract: File | null): Promise<void>;
+  /** Create only: the services the client bought (at least one). */
+  withServices?: boolean;
+  onSubmit(
+    values: ClientFormValues,
+    contract: File | null,
+    services: ServiceSelection[],
+  ): Promise<void>;
   onBusyChange?(busy: boolean): void;
 }
 
@@ -195,10 +206,14 @@ export function ClientForm({
   formId,
   defaultValues,
   withUpload,
+  withServices,
   onSubmit,
   onBusyChange,
 }: ClientFormProps) {
   const managers = useAccountManagers();
+  const { actor } = useAuth();
+  const [choice, setChoice] = useState<ServiceChoice>({});
+  const [servicesError, setServicesError] = useState<string | undefined>();
   const dupId = useId();
   const fileId = useId();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -222,9 +237,22 @@ export function ClientForm({
   }, [managers.data, setValue, getValues]);
 
   const submit = handleSubmit(async (values) => {
+    if (withServices) {
+      const bad = Object.values(choice).some(
+        (fee) => fee.trim() && !/^d+(.d{1,2})?$/.test(fee.trim()),
+      );
+      if (!Object.keys(choice).length || bad) {
+        setServicesError(
+          bad ? 'Enter fees as amounts, e.g. 45000.' : 'Choose at least one service.',
+        );
+        document.getElementById('client-services')?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      setServicesError(undefined);
+    }
     onBusyChange?.(true);
     try {
-      await onSubmit(values, contract);
+      await onSubmit(values, contract, withServices ? toSelections(choice) : []);
     } catch (error) {
       setError('root', {
         type: error instanceof ApiError ? String(error.details.reason ?? error.code) : 'unknown',
@@ -477,6 +505,21 @@ export function ClientForm({
           </Section>
         </div>
       </Card>
+      {withServices ? (
+        <Card className="p-6" id="client-services">
+          <Section icon={Briefcase} title="Services *">
+            <ServicePicker
+              value={choice}
+              onChange={(next) => {
+                setChoice(next);
+                setServicesError(undefined);
+              }}
+              showFees={can(actor?.permissions ?? [], P.financeView)}
+              error={servicesError}
+            />
+          </Section>
+        </Card>
+      ) : null}
       <label
         htmlFor={dupId}
         className={cn(

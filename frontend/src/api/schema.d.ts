@@ -1077,6 +1077,235 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Services
+         * @description Client services the actor can see, with tiles (fees only for money roles).
+         */
+        get: operations["services_list_services"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/services/clients/{client_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Client Services
+         * @description `services.manage` (the client's Account Manager). Returns the client's services.
+         */
+        post: operations["services_add_client_services"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/services/types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Service Types
+         * @description What Delphin sells: SEO and Social Media retainers; Website, Web App, Mobile App.
+         */
+        get: operations["services_list_service_types"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/services/types/{key}/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Templates */
+        get: operations["services_get_templates"];
+        /**
+         * Update Templates
+         * @description `services.templates.manage`. The full template; tasks left out are retired.
+         */
+        put: operations["services_update_templates"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/services/{service_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Service
+         * @description The workspace: this month's tasks and history (retainers) or the delivery tasks.
+         */
+        get: operations["services_get_service"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/services/{service_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a service */
+        post: operations["services_cancel_service"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/services/{service_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete a service */
+        post: operations["services_complete_service"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/services/{service_id}/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Month
+         * @description This month's retainer tasks. Idempotent: running it again creates nothing new.
+         */
+        post: operations["services_generate_month"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/services/{service_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause a service */
+        post: operations["services_pause_service"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/services/{service_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume a service */
+        post: operations["services_resume_service"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/services/{service_id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Service
+         * @description After onboarding: creates the delivery project with its template tasks.
+         */
+        post: operations["services_start_service"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/services/{service_id}/start-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Start Options
+         * @description Project Managers, with the delivering department's default.
+         */
+        get: operations["services_start_options"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tasks": {
         parameters: {
             query?: never;
@@ -1730,6 +1959,11 @@ export interface components {
             /** Title */
             title?: string | null;
         };
+        /** AddServices */
+        AddServices: {
+            /** Services */
+            services: components["schemas"]["ServiceSelection"][];
+        };
         /** Additional */
         Additional: {
             /** Notes */
@@ -2030,6 +2264,8 @@ export interface components {
             name: string;
             /** Payment Terms */
             payment_terms?: ("monthly" | "quarterly" | "half_yearly" | "annually" | "one_time" | "milestone") | null;
+            /** Services */
+            services: components["schemas"]["ServiceSelection"][];
             /** Website */
             website?: string | null;
         };
@@ -2157,6 +2393,18 @@ export interface components {
             /** Meetings */
             meetings: components["schemas"]["MeetingOut"][];
             stats: components["schemas"]["MeetingStats"];
+        };
+        /** ClientRef */
+        ClientRef: {
+            /** Code */
+            code: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /** ClientSummary */
         ClientSummary: {
@@ -2305,7 +2553,7 @@ export interface components {
         DeliveryProject: {
             /** Members */
             members: components["schemas"]["PersonRef"][];
-            project: components["schemas"]["ProjectRef"];
+            project: components["schemas"]["app__modules__team__schemas__ProjectRef"];
         };
         /** DepartmentIn */
         DepartmentIn: {
@@ -2704,6 +2952,15 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** GenerateResult */
+        GenerateResult: {
+            /** Created */
+            created: number;
+            /** Period */
+            period: string;
+            /** Skipped */
+            skipped: number;
+        };
         /** GuestIn */
         GuestIn: {
             /** Email */
@@ -2858,7 +3115,7 @@ export interface components {
             /** Kind Label */
             kind_label: string;
             manager: components["schemas"]["PersonRef"];
-            project: components["schemas"]["ProjectRef"] | null;
+            project: components["schemas"]["app__modules__team__schemas__ProjectRef"] | null;
         };
         /** MeetingIn */
         MeetingIn: {
@@ -3002,6 +3259,15 @@ export interface components {
         Message: {
             /** Message */
             message: string;
+        };
+        /** MonthSummary */
+        MonthSummary: {
+            /** Done */
+            done: number;
+            /** Period */
+            period: string;
+            /** Total */
+            total: number;
         };
         /** NextActionOut */
         NextActionOut: {
@@ -3277,6 +3543,13 @@ export interface components {
             /** Preferred Name */
             preferred_name?: string | null;
         };
+        /** Progress */
+        Progress: {
+            /** Done */
+            done: number;
+            /** Total */
+            total: number;
+        };
         /** ProjectCreate */
         ProjectCreate: {
             /**
@@ -3376,18 +3649,6 @@ export interface components {
              */
             id: string;
             manager: components["schemas"]["PersonRef"] | null;
-            /** Name */
-            name: string;
-        };
-        /** ProjectRef */
-        ProjectRef: {
-            /** Code */
-            code: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
             /** Name */
             name: string;
         };
@@ -3495,7 +3756,7 @@ export interface components {
             /** Kind Label */
             kind_label: string;
             manager: components["schemas"]["PersonRef"];
-            project?: components["schemas"]["ProjectRef"] | null;
+            project?: components["schemas"]["app__modules__team__schemas__ProjectRef"] | null;
             /**
              * Source
              * @enum {string}
@@ -3568,7 +3829,7 @@ export interface components {
             /** Kind Label */
             kind_label: string;
             manager: components["schemas"]["PersonRef"];
-            project: components["schemas"]["ProjectRef"] | null;
+            project: components["schemas"]["app__modules__team__schemas__ProjectRef"] | null;
             /**
              * Starts On
              * Format: date
@@ -3652,6 +3913,148 @@ export interface components {
             /** Question */
             question: string;
         };
+        /** ServiceDetail */
+        ServiceDetail: {
+            client: components["schemas"]["ClientRef"];
+            /** Code */
+            code: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Currency */
+            currency: string;
+            /** Current Period */
+            current_period: string | null;
+            /** End Date */
+            end_date: string | null;
+            /** Fee */
+            fee: string | null;
+            /** History */
+            history: components["schemas"]["MonthSummary"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            manager: components["schemas"]["UserRef"] | null;
+            /** Notes */
+            notes: string | null;
+            /** Onboarding Completed */
+            onboarding_completed: boolean;
+            permissions: components["schemas"]["ServicePermissions"];
+            progress: components["schemas"]["Progress"];
+            project: components["schemas"]["app__modules__services__schemas__ProjectRef"] | null;
+            service: components["schemas"]["ServiceTypeOut"];
+            /** Start Date */
+            start_date: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "planned" | "active" | "paused" | "completed" | "cancelled";
+            /** Status Label */
+            status_label: string;
+            /** Tasks */
+            tasks: components["schemas"]["TaskItem"][];
+        };
+        /** ServiceItem */
+        ServiceItem: {
+            client: components["schemas"]["ClientRef"];
+            /** Code */
+            code: string;
+            /** Currency */
+            currency: string;
+            /** End Date */
+            end_date: string | null;
+            /** Fee */
+            fee: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            manager: components["schemas"]["UserRef"] | null;
+            progress: components["schemas"]["Progress"];
+            project: components["schemas"]["app__modules__services__schemas__ProjectRef"] | null;
+            service: components["schemas"]["ServiceTypeOut"];
+            /** Start Date */
+            start_date: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "planned" | "active" | "paused" | "completed" | "cancelled";
+            /** Status Label */
+            status_label: string;
+        };
+        /** ServicePermissions */
+        ServicePermissions: {
+            /** Generate */
+            generate: boolean;
+            /** Manage */
+            manage: boolean;
+            /** See Money */
+            see_money: boolean;
+        };
+        /**
+         * ServiceSelection
+         * @description A service chosen for a client (at creation, or added later).
+         */
+        ServiceSelection: {
+            /** Fee */
+            fee?: number | string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Service Key */
+            service_key: string;
+        };
+        /** ServiceTemplates */
+        ServiceTemplates: {
+            /** Can Edit */
+            can_edit: boolean;
+            service: components["schemas"]["ServiceTypeOut"];
+            /** Tasks */
+            tasks: components["schemas"]["TemplateTaskOut"][];
+        };
+        /** ServiceTypeOut */
+        ServiceTypeOut: {
+            department: components["schemas"]["Ref"] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "retainer" | "project";
+            /** Name */
+            name: string;
+        };
+        /** ServicesOverview */
+        ServicesOverview: {
+            /** Items */
+            items: components["schemas"]["ServiceItem"][];
+            tiles: components["schemas"]["ServicesTiles"];
+        };
+        /** ServicesTiles */
+        ServicesTiles: {
+            /** Active Retainers */
+            active_retainers: number;
+            /** Contracted Monthly */
+            contracted_monthly: string | null;
+            /** Planned */
+            planned: number;
+            /** Projects In Progress */
+            projects_in_progress: number;
+        };
         /**
          * SessionRequest
          * @description Exchange a Firebase ID token (from the browser SDK) for an app session.
@@ -3671,6 +4074,27 @@ export interface components {
              * @enum {string}
              */
             state: "pending" | "in_progress" | "completed" | "blocked";
+        };
+        /** StartOptions */
+        StartOptions: {
+            default_manager: components["schemas"]["UserRef"] | null;
+            /** Managers */
+            managers: components["schemas"]["UserRef"][];
+            /** Onboarding Completed */
+            onboarding_completed: boolean;
+        };
+        /** StartService */
+        StartService: {
+            /**
+             * Manager Id
+             * Format: uuid
+             */
+            manager_id: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
         };
         /** StatusCounts */
         StatusCounts: {
@@ -3936,6 +4360,79 @@ export interface components {
             /** Role Title */
             role_title?: string | null;
         };
+        /** TemplateTaskIn */
+        TemplateTaskIn: {
+            /** Area */
+            area?: ("account" | "project_management" | "seo" | "content" | "design" | "development" | "social" | "analytics") | null;
+            /** Day Of Month */
+            day_of_month?: number | null;
+            /**
+             * Duration Days
+             * @default 0
+             */
+            duration_days: number;
+            /** Id */
+            id?: string | null;
+            /**
+             * Phase
+             * @enum {string}
+             */
+            phase: "setup" | "monthly" | "delivery";
+            /**
+             * Requires Client Approval
+             * @default false
+             */
+            requires_client_approval: boolean;
+            /**
+             * Requires Review
+             * @default true
+             */
+            requires_review: boolean;
+            /**
+             * Start Offset Days
+             * @default 0
+             */
+            start_offset_days: number;
+            /** Title */
+            title: string;
+        };
+        /** TemplateTaskOut */
+        TemplateTaskOut: {
+            /** Area */
+            area: ("account" | "project_management" | "seo" | "content" | "design" | "development" | "social" | "analytics") | null;
+            /** Day Of Month */
+            day_of_month: number | null;
+            /** Duration Days */
+            duration_days: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Phase
+             * @enum {string}
+             */
+            phase: "setup" | "monthly" | "delivery";
+            /** Requires Client Approval */
+            requires_client_approval: boolean;
+            /** Requires Review */
+            requires_review: boolean;
+            /** Sort */
+            sort: number;
+            /** Start Offset Days */
+            start_offset_days: number;
+            /** Title */
+            title: string;
+        };
+        /**
+         * TemplateUpdate
+         * @description The complete template: tasks not listed are retired (kept for history).
+         */
+        TemplateUpdate: {
+            /** Tasks */
+            tasks: components["schemas"]["TemplateTaskIn"][];
+        };
         /** UserOption */
         UserOption: {
             /** Email */
@@ -4022,6 +4519,18 @@ export interface components {
              */
             action: "hold" | "complete" | "reactivate";
         };
+        /** ProjectRef */
+        app__modules__services__schemas__ProjectRef: {
+            /** Code */
+            code: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /** StatusChange */
         app__modules__tasks__schemas__StatusChange: {
             /**
@@ -4029,6 +4538,18 @@ export interface components {
              * @enum {string}
              */
             status: "backlog" | "ready" | "in_progress" | "blocked" | "internal_review" | "client_approval" | "completed" | "cancelled";
+        };
+        /** ProjectRef */
+        app__modules__team__schemas__ProjectRef: {
+            /** Code */
+            code: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
     };
     responses: never;
@@ -8012,6 +8533,844 @@ export interface operations {
             };
             /** @description Not yet ported from the pilot */
             501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    services_list_services: {
+        parameters: {
+            query?: {
+                kind?: ("retainer" | "project") | null;
+                status?: ("planned" | "active" | "paused" | "completed" | "cancelled") | null;
+                client_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServicesOverview"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    services_add_client_services: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddServices"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceItem"][];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found (or not visible) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client already has that retainer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    services_list_service_types: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceTypeOut"][];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    services_get_templates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceTemplates"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found (or not visible) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client already has that retainer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    services_update_templates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceTemplates"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found (or not visible) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client already has that retainer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    services_get_service: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found (or not visible) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client already has that retainer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    services_cancel_service: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found (or not visible) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client already has that retainer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    services_complete_service: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found (or not visible) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client already has that retainer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    services_generate_month: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerateResult"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found (or not visible) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client already has that retainer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    services_pause_service: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found (or not visible) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client already has that retainer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    services_resume_service: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found (or not visible) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client already has that retainer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    services_start_service: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartService"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceDetail"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found (or not visible) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client already has that retainer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    services_start_options: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                service_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartOptions"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Permission denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Not found (or not visible) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description The client already has that retainer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Validation failed or business rule violated */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

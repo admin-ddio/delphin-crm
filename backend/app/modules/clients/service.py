@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authz.actor import Actor
 from app.authz.permissions import CLIENTS_UPDATE
+from app.core.clock import SystemClock
 from app.core.errors import BusinessRuleViolation, Conflict, Forbidden, NotFound, ValidationFailed
 from app.core.pagination import Page, PageParams, parse_sort
 from app.modules.clients.models import Client
@@ -39,6 +40,7 @@ from app.modules.clients.schemas import (
     UserRef,
 )
 from app.modules.notifications.service import NotificationService
+from app.modules.services.service import ServicesService
 from app.platform.activity.service import ActivityRecorder
 from app.platform.audit.service import AuditWriter
 from app.platform.identity.models import User
@@ -230,6 +232,9 @@ class ClientService:
             subject_id=client.id,
             actor_user_id=actor.user_id,
             summary=f"Client {client.name} created",
+        )
+        await ServicesService(self._session, clock=SystemClock()).add_for_client(
+            actor, client, data.services, at_creation=True
         )
         if manager.id != actor.user_id:
             await self._notifier.notify(

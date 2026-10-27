@@ -84,6 +84,7 @@ class World:
             "contract_start": "2026-05-01",
             "contract_end": "2027-04-30",
             "account_manager_id": str(manager.id),
+            "services": [{"service_key": "seo"}],
             **fields,
         }
         response = await self.http.post("/api/v1/clients", json=body)

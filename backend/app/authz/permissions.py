@@ -43,11 +43,16 @@ TASKS_CREATE: Final = "tasks.create"
 TASKS_REVIEW: Final = "tasks.review"
 APPROVALS_CLIENT_DECISION: Final = "approvals.client_decision"
 SERVICES_MANAGE: Final = "services.manage"
+# Services plan (2026-10): see every client service; edit the service task templates.
+SERVICES_VIEW_ALL: Final = "services.view_all"
+SERVICES_TEMPLATES_MANAGE: Final = "services.templates.manage"
 JOBS_RUN: Final = "jobs.run"
 FINANCE_MANAGE: Final = "finance.manage"
 FINANCE_VIEW: Final = "finance.view"
 # Approve or reject self sign-ups (only Super Admin has it until permissions.ts is ported).
 USERS_APPROVE: Final = "users.approve"
+# Invite people and deactivate / reactivate sign-in accounts (Team & Roles).
+USERS_MANAGE: Final = "users.manage"
 # Schedule and run client meetings (AM, PM, Team Lead; the client's AM and team too).
 MEETINGS_MANAGE: Final = "meetings.manage"
 # HR: employee records and employment details (EDIT_EMPLOYEE_PROFILE); see every
@@ -82,10 +87,13 @@ PERMISSION_INFO: Final[dict[str, tuple[str, str]]] = {
     TASKS_REVIEW: ("Projects & tasks", "Review tasks"),
     APPROVALS_CLIENT_DECISION: ("Projects & tasks", "Record client decisions"),
     SERVICES_MANAGE: ("Services & finance", "Manage services & retainers"),
+    SERVICES_VIEW_ALL: ("Services & finance", "See every client service"),
+    SERVICES_TEMPLATES_MANAGE: ("Services & finance", "Edit service task templates"),
     FINANCE_MANAGE: ("Services & finance", "Manage finance"),
     FINANCE_VIEW: ("Services & finance", "View finance"),
     JOBS_RUN: ("System", "Run background jobs"),
     USERS_APPROVE: ("System", "Approve sign-ups"),
+    USERS_MANAGE: ("System", "Invite and deactivate accounts"),
     HR_MANAGE: ("Employees (HR)", "Edit employee profiles"),
     HR_VIEW_ALL: ("Employees (HR)", "See everyone's employment details"),
     HR_PERSONAL_VIEW: ("Employees (HR)", "See personal details"),
@@ -154,6 +162,7 @@ DEFAULT_ROLES: Final[tuple[RoleDefinition, ...]] = (
             PROJECTS_VIEW_ALL,
             APPROVALS_CLIENT_DECISION,
             SERVICES_MANAGE,
+            SERVICES_VIEW_ALL,
             FINANCE_VIEW,
             MEETINGS_MANAGE,
             ORG_TEAM_VIEW,
@@ -175,6 +184,8 @@ DEFAULT_ROLES: Final[tuple[RoleDefinition, ...]] = (
             MEETINGS_MANAGE,
             ORG_TEAM_VIEW,
             ORG_PROJECTS_ASSIGN,
+            SERVICES_VIEW_ALL,
+            SERVICES_TEMPLATES_MANAGE,
         },
     ),
     RoleDefinition(
@@ -189,7 +200,8 @@ DEFAULT_ROLES: Final[tuple[RoleDefinition, ...]] = (
         "finance",
         "Finance",
         "",
-        EVERYONE | {CLIENTS_VIEW_ALL, PROJECTS_VIEW_ALL, FINANCE_MANAGE, FINANCE_VIEW},
+        EVERYONE
+        | {CLIENTS_VIEW_ALL, PROJECTS_VIEW_ALL, FINANCE_MANAGE, FINANCE_VIEW, SERVICES_VIEW_ALL},
     ),
     # HR brief: employee records and personal details. Org structure moved to org_admin.
     RoleDefinition(

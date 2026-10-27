@@ -76,10 +76,11 @@ export function Component() {
       <ClientForm
         formId="client-form"
         withUpload
+        withServices
         defaultValues={{ ...emptyClientForm, accountManagerId: actor.id }}
         onBusyChange={setBusy}
-        onSubmit={async (values, contract) => {
-          const client = await create.mutateAsync(toClientBody(values));
+        onSubmit={async (values, contract, services) => {
+          const client = await create.mutateAsync({ ...toClientBody(values), services });
           if (contract) {
             try {
               await uploadDocument(client.id, contract, { name: 'Contracts' });

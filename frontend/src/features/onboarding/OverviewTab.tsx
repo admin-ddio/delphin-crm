@@ -31,6 +31,7 @@ import { KeyValue, StepList } from '@/components/ui/Data';
 import { Dialog } from '@/components/ui/Dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Link } from '@/components/ui/Link';
+import { ClientServicesPanel } from '@/features/services/ClientServicesPanel';
 import { Ring } from '@/components/ui/Ring';
 import { useToast } from '@/components/ui/Toast';
 import {
@@ -328,11 +329,11 @@ function ReviewAndCompletion({ data, client }: { data: OnboardingDetail; client:
     const hasProject = Boolean(projects.data?.length);
     return (
       <Alert tone="ok" title={`Onboarding completed ${formatDate(data.completed_at)}`}>
-        The client is Active and project creation is enabled.{' '}
-        {!hasProject && can(actor?.permissions ?? [], P.projectsCreate) ? (
-          <Link className="link" to={`/projects/new?client=${client.id}`}>
-            Create the delivery project →
-          </Link>
+        The client is Active and delivery can start.{' '}
+        {!hasProject && can(actor?.permissions ?? [], P.servicesManage) ? (
+          <a className="link" href="#client-services-panel">
+            Start the client's services ↓
+          </a>
         ) : null}
       </Alert>
     );
@@ -386,6 +387,7 @@ export function OverviewTab({ client }: { client: ClientDetail }) {
     <div className="flex flex-col gap-5">
       <ProgressCard data={data} />
       <ReviewAndCompletion data={data} client={client} />
+      <ClientServicesPanel client={client} onboardingCompleted={Boolean(data.completed_at)} />
       <div className="grid items-start gap-5 xl:grid-cols-[1.25fr_1fr_1fr]">
         <ClientDetails client={client} />
         <QuickStatus data={data} />
